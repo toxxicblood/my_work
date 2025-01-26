@@ -99,7 +99,11 @@ class CrosswordCreator():
         (Remove any values that are inconsistent with a variable's unary
          constraints; in this case, the length of the word.)
         """
-        raise NotImplementedError
+        for variable in self.crossword.variables:
+            for word in self.crossword.words:
+                if len(word) != variable.length:
+                    self.domains[variable].remove(word)
+        
 
     def revise(self, x, y):
         """
@@ -109,8 +113,22 @@ class CrosswordCreator():
 
         Return True if a revision was made to the domain of `x`; return
         False if no revision was made.
+        for word_x in self.domains[x]:#.copy():
+            if all(not self.crossword.consistent(word_x, word_y) for word_y in self.domains[y]):
+                self.domains[x].remove(word_x)
+                revised = True
+        return revised
         """
-        raise NotImplementedError
+        revised = False
+        index = self.crossword.overlaps[x,y]
+        if index:
+            for word_x in self.domains[x]:
+                    if all((word_x[index[0]] != word_y[index[1]]) for word_y in self.domains[y]):
+                        self.domains[x].remove(word_x)
+                        revised = True
+        return revised
+                        
+
 
     def ac3(self, arcs=None):
         """
@@ -121,21 +139,34 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
-        raise NotImplementedError
+        if not arcs:
+            arcs = [(x, y) for x in self.crossword.variables for y in self.crossword.neighbors(x)]
+        while arcs:
+            x, y = arcs.pop(0)
+            if self.revise(x, y):
+                if not self.domains[x]:
+                    return False
+                for z in self.crossword.neighbors(x) - {y}:
+                    arcs.append((z, x))
+        return True
 
     def assignment_complete(self, assignment):
         """
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
-        raise NotImplementedError
+        for variable in self.crossword.variables:
+            if variable not in assignment:
+                return False
+        return True
+
 
     def consistent(self, assignment):
         """
         Return True if `assignment` is consistent (i.e., words fit in crossword
         puzzle without conflicting characters); return False otherwise.
         """
-        raise NotImplementedError
+        
 
     def order_domain_values(self, var, assignment):
         """
@@ -144,7 +175,7 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        raise NotImplementedError
+        pass
 
     def select_unassigned_variable(self, assignment):
         """
@@ -154,7 +185,9 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
-        raise NotImplementedError
+        pass
+    def infer(self, assignment):
+        pass
 
     def backtrack(self, assignment):
         """
@@ -165,7 +198,28 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
-        raise NotImplementedError
+
+        if self.assignment_complete(assignment):
+            return assignment
+        variable = self.select_unassigned_variable(assignment)#we select an unassigned var
+        for value in self.domains[variable]:
+            mock_assignment = assignment.copy()
+            mock_assignment[variable] = value
+            if self.consistent(mock_assignment):#if variable doesnt violate any constraints
+                assignment[variable] = value#we add the assignment
+                '''
+                inferences = self.infer(assignment)
+                if inferences != None:
+                    add inferences to assignment
+                '''
+                result = self.backtrack(assignment)
+                if result != None:
+                    return result
+                assignment.pop(variable) 
+                '''
+                remove inferences from assignment
+                '''
+        return None
 
 
 def main():
