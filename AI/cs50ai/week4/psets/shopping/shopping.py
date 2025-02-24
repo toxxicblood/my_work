@@ -1,6 +1,6 @@
 import csv
 import sys
-
+import calendar
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -59,6 +59,7 @@ def load_data(filename):
     labels should be the corresponding list of labels, where each label
     is 1 if Revenue is true, and 0 otherwise.
     """
+    # """
     with open(filename) as f:
         reader = csv.reader(f)
         next(reader)
@@ -67,13 +68,15 @@ def load_data(filename):
         labels = []
         for row in reader:
             data = []
-            pages = row[0:6]# pages the user visited and for how long(alternating duration and number)
-            Ganalytics = row[6:10]# info from google about page(floats)
-            month = row[10]#abbreviation for month user visited
-            user_data = row[11:15]#(integers)
-            visitor_type = row[15]#0(not returning) 1 (returning)(int)
-            weekend = row[16]#0(false) or 1(true)(int)
-            label = row[17]# 1(revenue is true) and 0 otherwise.
+            pages = row[
+                0:6
+            ]  # pages the user visited and for how long(alternating duration and number)
+            Ganalytics = row[6:10]  # info from google about page(floats)
+            month = row[10]  # abbreviation for month user visited
+            user_data = row[11:15]  # (integers)
+            visitor_type = row[15]  # 0(not returning) 1 (returning)(int)
+            weekend = row[16]  # 0(false) or 1(true)(int)
+            label = row[17]  # 1(revenue is true) and 0 otherwise.
 
             for i in range(len(pages)):
                 if i % 2 == 0:
@@ -109,6 +112,7 @@ def load_data(filename):
                     data.append(10)
                 case "dec":
                     data.append(11)
+
             for cell in user_data:
                 data.append(int(cell))
 
@@ -128,7 +132,32 @@ def load_data(filename):
             else:
                 labels.append(0)
 
-    return (evidence,labels)
+    return (evidence, labels)
+    # """
+    # the follwoing would be a more efficient method of creating the above function.
+    # consider the differences between my code an the ai code.
+    """
+    with open(filename) as f:
+        reader = csv.reader(f)
+        next(reader)
+        evidence, labels = [], []
+
+        month_index = {
+            month: index for index, month in enumerate(calendar.month_abbr) if month
+        }
+
+        for row in reader:
+            evidence.append(
+                [int(row[i]) if i % 2 == 0 else float(row[i]) for i in range(6)]
+                + [float(row[i]) for i in range(6, 10)]
+                + [month_index.get(row[10].capitalize().strip(), -1)]
+                + [int(row[i]) for i in range(11, 15)]
+                + [1 if row[15] == "Returning_Visitor" else 0]
+                + [1 if row[16].lower() == "true" else 0]
+            )
+            labels.append(1 if row[17].lower() == "true" else 0)
+    return (evidence, labels)
+     """
 
 
 def train_model(evidence, labels):
@@ -136,7 +165,9 @@ def train_model(evidence, labels):
     Given a list of evidence lists and a list of labels, return a
     fitted k-nearest neighbor model (k=1) trained on the data.
     """
-    raise NotImplementedError
+    model = KNeighborsClassifier(n_neighbors=1)
+
+    return model.fit(evidence, labels)
 
 
 def evaluate(labels, predictions):
@@ -154,7 +185,24 @@ def evaluate(labels, predictions):
     representing the "true negative rate": the proportion of
     actual negative labels that were accurately identified.
     """
-    raise NotImplementedError
+    sensitivity = 0
+    true_count = 0
+    specificity = 0
+    false_count = 0
+    for i in range(len(labels)):
+        if labels[i] == 1:
+            true_count += 1
+            if labels[i] == predictions[i]:
+                sensitivity += 1
+        elif labels[i] == 0:
+            false_count += 1
+            if labels[i] == predictions[i]:
+                specificity += 1
+
+    sensitivity = sensitivity / true_count
+    specificity = specificity / false_count
+
+    return (sensitivity, specificity)
 
 
 if __name__ == "__main__":
