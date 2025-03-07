@@ -1,0 +1,87 @@
+Date,Day,Time Slot,Activity,Resource,Estimated Duration (hrs),Comments,
+03/07/25,2025,Friday,5:30–6:30 AM,Wake Up & Exercise,None,1,Morning jog/gym.
+03/07/25,2025,Friday,6:30–7:30 AM,Breakfast & Daily Review,None,1,Review day’s plan.
+03/07/25,2025,Friday,7:30–8:00 AM,Commute/Prep for Work,None,0.5,Prepare for work.
+03/07/25,2025,Friday,8:00–12:00 PM,Work Hours + Break Study,Pandas Documentation Tutorials,1.5,Focus on Data Manipulation & Analysis. (Total Pandas resource ~10 hrs; spread sessions over weeks.)
+03/07/25,2025,Friday,12:00–1:00 PM,Lunch Break Study,Kaggle Mini Dataset Exercises,1,Practice data cleaning.
+03/07/25,2025,Friday,1:00–5:00 PM,Work Hours,None,4,Regular work.
+03/07/25,2025,Friday,5:00–6:00 PM,Commute/Relax,None,1,Decompress after work.
+03/07/25,2025,Friday,6:00–7:30 PM,Evening Study Session,Mathematics for Machine Learning (Ch. 1–2),1.5,Total book ~60 hrs; study math foundations.
+03/07/25,2025,Friday,7:30–8:30 PM,Dinner & Relaxation,None,1,Meal time.
+03/07/25,2025,Friday,8:30–9:30 PM,Late Evening Study,LeetCode / Coding Practice,1,Practice coding exercises.
+03/07/25,2025,Friday,9:30–10:00 PM,Wind Down & Prepare for Sleep,None,0.5,Relaxation before sleep.
+03/07/25,2025,Friday,10:00:00 PM,Sleep,None,0,Sleep.
+03/08/25,2025,Saturday,5:30–6:30 AM,Wake Up & Exercise,None,1,Morning exercise.
+03/08/25,2025,Saturday,6:30–7:30 AM,Breakfast & Daily Review,None,1,Plan the day.
+03/08/25,2025,Saturday,7:30–9:00 AM,Personal Time/Leisure,None,1.5,Free time.
+03/08/25,2025,Saturday,9:00–12:00 PM,Study Session,CS231n Video Lectures,3,Deep Learning specialization; total CS231n ~40 hrs.
+03/08/25,2025,Saturday,12:00–1:00 PM,Lunch Break Study,OpenAI Spinning Up – RL Intro,1,Intro to Reinforcement Learning; total RL resource ~30 hrs.
+03/08/25,2025,Saturday,1:00–3:00 PM,Project Work,Kaggle Competition Practice,2,Hands-on project work.
+03/08/25,2025,Saturday,3:00–5:00 PM,Project Work/Review,None,2,Additional project work or catch-up.
+03/08/25,2025,Saturday,5:00–6:00 PM,Relax/Break,None,1,Break time.
+03/08/25,2025,Saturday,6:00–7:30 PM,Evening Study,ArXiv Research Papers on Deep Learning,1.5,Read recent research articles.
+03/08/25,2025,Saturday,7:30–8:30 PM,Dinner & Relaxation,None,1,Dinner.
+03/08/25,2025,Saturday,8:30–9:30 PM,Late Evening Study,Coding Practice / GitHub Projects,1,Work on coding challenges.
+03/08/25,2025,Saturday,9:30–10:00 PM,Wind Down & Prepare for Sleep,None,0.5,Prepare for bed.
+03/08/25,2025,Saturday,10:00:00 PM,Sleep,None,0,Sleep.
+03/09/25,2025,Sunday,5:30–6:30 AM,Wake Up & Exercise,None,1,Exercise session.
+03/09/25,2025,Sunday,6:30–7:30 AM,Breakfast,None,1,Start the day.
+03/09/25,2025,Sunday,7:30–10:00 AM,Church Service,None,2.5,Attend church.
+03/09/25,2025,Sunday,10:00–12:00 PM,Weekly Review & Planning,None,2,Review past week and plan upcoming week.
+03/09/25,2025,Sunday,12:00–1:00 PM,Lunch,None,1,Lunch break.
+03/09/25,2025,Sunday,1:00–3:00 PM,Project Work/Revision,Review notes from Andrew Ng’s ML Course,2,Catch up on studies.
+03/09/25,2025,Sunday,3:00–5:00 PM,Free Time/Leisure,None,2,Rest or personal activities.
+03/09/25,2025,Sunday,5:00–6:00 PM,Commute/Relax,None,1,Evening relaxation.
+03/09/25,2025,Sunday,6:00–7:30 PM,Evening Study,Python Data Science Handbook (Ch. 1),1.5,Total book ~40 hrs; begin chapter work.
+03/09/25,2025,Sunday,7:30–8:30 PM,Dinner,None,1,Dinner.
+03/09/25,2025,Sunday,8:30–9:30 PM,Late Evening Review,Weekly plan review & goal setting,1,Prepare for next week.
+03/09/25,2025,Sunday,9:30–10:00 PM,Wind Down,None,0.5,Wind down.
+03/09/25,2025,Sunday,10:00:00 PM,Sleep,None,0,Sleep.
+03/10/25,2025,Monday,5:30–6:30 AM,Wake Up & Exercise,None,1,Exercise session.
+03/10/25,2025,Monday,6:30–7:30 AM,Breakfast & Daily Review,None,1,Plan and review goals.
+03/10/25,2025,Monday,7:30–8:00 AM,Commute/Prep for Work,None,0.5,Commute.
+03/10/25,2025,Monday,8:00–12:00 PM,Work Hours + Break Study,Seaborn Tutorial,1.5,Focus on Data Visualization; total Seaborn resource ~5 hrs.
+03/10/25,2025,Monday,12:00–1:00 PM,Lunch Break Study,Recreate Visualizations,1,Hands-on visualization practice.
+03/10/25,2025,Monday,1:00–5:00 PM,Work Hours,None,4,Work.
+03/10/25,2025,Monday,5:00–6:00 PM,Commute/Relax,None,1,Relax after work.
+03/10/25,2025,Monday,6:00–7:30 PM,Evening Study,Andrew Ng’s Machine Learning Course (Intro Modules),1.5,Total course ~55 hrs; progress module-by-module.
+03/10/25,2025,Monday,7:30–8:30 PM,Dinner & Relaxation,None,1,Dinner time.
+03/10/25,2025,Monday,8:30–9:30 PM,Late Evening Study,Coding Practice on LeetCode,1,Focus on coding challenges.
+03/10/25,2025,Monday,9:30–10:00 PM,Wind Down,None,0.5,Prepare for sleep.
+03/10/25,2025,Monday,10:00:00 PM,Sleep,None,0,Sleep.
+03/11/25,2025,Tuesday,5:30–6:30 AM,Wake Up & Exercise,None,1,Morning exercise.
+03/11/25,2025,Tuesday,6:30–7:30 AM,Breakfast & Daily Review,None,1,Daily review.
+03/11/25,2025,Tuesday,7:30–8:00 AM,Commute/Prep for Work,None,0.5,Commute.
+03/11/25,2025,Tuesday,8:00–12:00 PM,Work Hours + Break Study,Andrew Ng’s ML Course (Continued),1.5,Continue ML fundamentals.
+03/11/25,2025,Tuesday,12:00–1:00 PM,Lunch Break Study,Hands-On Machine Learning (Ch. 1),1,Practical exercises; resource ~40 hrs total.
+03/11/25,2025,Tuesday,1:00–5:00 PM,Work Hours,None,4,Work.
+03/11/25,2025,Tuesday,5:00–6:00 PM,Commute/Relax,None,1,Decompress.
+03/11/25,2025,Tuesday,6:00–7:30 PM,Evening Study,Python Data Science Handbook (Ch. 2),1.5,Study data science fundamentals.
+03/11/25,2025,Tuesday,7:30–8:30 PM,Dinner & Relax,None,1,Dinner.
+03/11/25,2025,Tuesday,8:30–9:30 PM,Late Evening Study,Coding / Kaggle Practice,1,Practice coding exercises.
+03/11/25,2025,Tuesday,9:30–10:00 PM,Wind Down,None,0.5,Wind down.
+03/11/25,2025,Tuesday,10:00:00 PM,Sleep,None,0,Sleep.
+03/12/25,2025,Wednesday,5:30–6:30 AM,Wake Up & Exercise,None,1,Exercise.
+03/12/25,2025,Wednesday,6:30–7:30 AM,Breakfast & Daily Review,None,1,Plan day.
+03/12/25,2025,Wednesday,7:30–8:00 AM,Commute/Prep for Work,None,0.5,Commute.
+03/12/25,2025,Wednesday,8:00–12:00 PM,Work Hours + Break Study,Kaggle ML Micro-Course,1.5,Advanced ML topics; resource ~8 hrs total.
+03/12/25,2025,Wednesday,12:00–1:00 PM,Lunch Break Study,Data Cleaning Exercises,1,Practice and review.
+03/12/25,2025,Wednesday,1:00–5:00 PM,Work Hours,None,4,Work.
+03/12/25,2025,Wednesday,5:00–6:00 PM,Commute/Relax,None,1,Relax.
+03/12/25,2025,Wednesday,6:00–7:30 PM,Evening Study,Deep Learning Specialization (Intro Modules),1.5,Total course ~60 hrs; start with basics.
+03/12/25,2025,Wednesday,7:30–8:30 PM,Dinner & Relax,None,1,Dinner.
+03/12/25,2025,Wednesday,8:30–9:30 PM,Late Evening Study,Coding Practice / GitHub Projects,1,Project coding.
+03/12/25,2025,Wednesday,9:30–10:00 PM,Wind Down,None,0.5,Wind down.
+03/12/25,2025,Wednesday,10:00:00 PM,Sleep,None,0,Sleep.
+03/13/25,2025,Thursday,5:30–6:30 AM,Wake Up & Exercise,None,1,Exercise.
+03/13/25,2025,Thursday,6:30–7:30 AM,Breakfast & Daily Review,None,1,Daily plan.
+03/13/25,2025,Thursday,7:30–8:00 AM,Commute/Prep for Work,None,0.5,Commute.
+03/13/25,2025,Thursday,8:00–12:00 PM,Work Hours + Break Study,Deep Learning Specialization (Continued),1.5,Continue deep learning modules.
+03/13/25,2025,Thursday,12:00–1:00 PM,Lunch Break Study,Review Coding Examples,1,Hands-on review.
+03/13/25,2025,Thursday,1:00–5:00 PM,Work Hours,None,4,Work.
+03/13/25,2025,Thursday,5:00–6:00 PM,Commute/Relax,None,1,Relax.
+03/13/25,2025,Thursday,6:00–7:30 PM,Evening Study,Research Paper Reading (arXiv),1.5,Stay updated on latest AI research.
+03/13/25,2025,Thursday,7:30–8:30 PM,Dinner & Relax,None,1,Dinner.
+03/13/25,2025,Thursday,8:30–9:30 PM,Late Evening Study,Project Work / GitHub Updates,1,Update projects.
+03/13/25,2025,Thursday,9:30–10:00 PM,Wind Down,None,0.5,Prepare for sleep.
+03/13/25,2025,Thursday,10:00:00 PM,Sleep,None,0,Sleep.

@@ -1,4 +1,6 @@
 import sys
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow as tf
 
 # Use MNIST handwriting dataset
@@ -22,6 +24,10 @@ model = tf.keras.models.Sequential([
     # Convolutional layer. Learn 32 filters using a 3x3 kernel
     tf.keras.layers.Conv2D(
         32, (3, 3), activation="relu", input_shape=(28, 28, 1)
+        # each image is a 28pixel by 28pixel
+        # only black and white thus  0 or 1(1 colored value)
+        #Otherwise we would have 3 values for each pixel for a colored image
+
     ),
 
     # Max-pooling layer, using 2x2 pool size
@@ -36,7 +42,7 @@ model = tf.keras.models.Sequential([
 
     # Add an output layer with output units for all 10 digits
     tf.keras.layers.Dense(10, activation="softmax")
-])
+])#softmax turns the output into a probability distribution
 
 # Train neural network
 model.compile(

@@ -1,7 +1,11 @@
 import csv
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow as tf
+import numpy as np
 
 from sklearn.model_selection import train_test_split
+
 
 # Read data in from file
 with open("banknotes.csv") as f:
@@ -21,6 +25,10 @@ labels = [row["label"] for row in data]
 X_training, X_testing, y_training, y_testing = train_test_split(
     evidence, labels, test_size=0.4
 )
+X_training = np.array(X_training)
+y_training = np.array(y_training)
+X_testing = np.array(X_testing)
+y_testing = np.array(y_testing)
 
 # Create a neural network
 model = tf.keras.models.Sequential()
@@ -37,7 +45,8 @@ model.compile(
     loss="binary_crossentropy",
     metrics=["accuracy"]
 )
-model.fit(X_training, y_training, epochs=20)
+model.fit(X_training, y_training, epochs=60)
 
 # Evaluate how well model performs
 model.evaluate(X_testing, y_testing, verbose=2)
+
