@@ -46,8 +46,17 @@ def get_mask_token_index(mask_token_id, inputs):
     `None` if not present in the `inputs`.
     """
     # TODO: Implement this function
-    raise NotImplementedError
-
+    # print ("inputs:",inputs['input_ids'])
+    # print ("inputs:",inputs['input_ids'][0][0])
+    # if inputs['input_ids'][0][0] == 101:
+    # print("Getting somewhere")
+    # print(len(inputs['input_ids'][0]))
+    # print("mask:",mask_token_id)
+    for i in range(len(inputs["input_ids"][0])):
+        if inputs["input_ids"][0][i] == mask_token_id:
+            #       print(i)
+            return i
+    return None
 
 
 def get_color_for_attention_score(attention_score):
@@ -55,9 +64,15 @@ def get_color_for_attention_score(attention_score):
     Return a tuple of three integers representing a shade of gray for the
     given `attention_score`. Each value should be in the range [0, 255].
     """
-    # TODO: Implement this function
-    raise NotImplementedError
-
+    # TODO: Implement this functionp
+    # print ("attention_score",attention_score)
+    attention = attention_score.numpy()
+    # print("attention",attention)
+    # print("product",attention_score*255)
+    # print("product2",attention*255)
+    # print("round",round(attention*255))
+    color = round(attention * 255)
+    return (color, color, color)
 
 
 def visualize_attentions(tokens, attentions):
@@ -71,12 +86,10 @@ def visualize_attentions(tokens, attentions):
     (starting count from 1).
     """
     # TODO: Update this function to produce diagrams for all layers and heads.
-    generate_diagram(
-        1,
-        1,
-        tokens,
-        attentions[0][0][0]
-    )
+    beam = 0
+    for layer in range(12):
+        for head in range(12):
+            generate_diagram(layer + 1, head + 1, tokens, attentions[layer][beam][head])
 
 
 def generate_diagram(layer_number, head_number, tokens, attention_weights):
@@ -103,7 +116,7 @@ def generate_diagram(layer_number, head_number, tokens, attention_weights):
             (image_size - PIXELS_PER_WORD, PIXELS_PER_WORD + i * GRID_SIZE),
             token,
             fill="white",
-            font=FONT
+            font=FONT,
         )
         token_image = token_image.rotate(90)
         img.paste(token_image, mask=token_image)
@@ -114,7 +127,7 @@ def generate_diagram(layer_number, head_number, tokens, attention_weights):
             (PIXELS_PER_WORD - width, PIXELS_PER_WORD + i * GRID_SIZE),
             token,
             fill="white",
-            font=FONT
+            font=FONT,
         )
 
     # Draw each word
