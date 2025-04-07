@@ -45,7 +45,16 @@ THe data is in csv format with 6 categories:
 
 - I can train different models for each timeframe, take their predictions as input into a different model which can take each timeframe and the news sentiment analysis and give a final bias prediction.
 
-## Ideas from documentation
+## Research
 
-The below are metrics i can use to measure the accuracy of a model i train.
-[Accuracy, F1 score, MUC](https://chatgpt.com/c/67ea6594-69b8-800e-b222-85d09937f3b9#:~:text=Accuracy%2C%20F1%20score%2C%20and%20AUC%20are,false%20positives%20and%20false%20negatives%20differ.)
+I went through a couple of research papers to see how other people have used AI and ML in forex market analysis.
+In the following sections i will be breaking down my findings and thus create a hypothesis of the model i will go ahead with testing the various methodologies experimenting with different combinaions till i find one that performs well.
+
+THe models i found being used most were LSTM(long short term memory) algorithms and CNNs(convolutional neural networks).
+THe approach most used was deep learning.
+In the following sections is a summary of my findings with the respective papers.
+
+### A Deep reinforcement learning approach for trading optimization in the  forex market with multi-agent Asynchronous Distribution by Davoud Sarani and DR. Parviz Rashidi Khazaee.
+
+I intend to compare this paper with the one that follows.FInd it below.
+Reference: the full paper is available on my github. [DRL](https://github.com/toxxicblood/learning/blob/main/AI/playground/DRL%20multi%20agent%20for%20different%20timeframes.pdf)
