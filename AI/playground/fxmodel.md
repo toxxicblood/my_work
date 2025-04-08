@@ -91,7 +91,7 @@ Utilizing DQN and A3C algos with SDAEs and LSTM networks:
 
 - In this research they focused on A3C and PPO to train a RL agent capable of executing trades in the markets
 
-#### Asynchronous Advantage Actor-Critic(A3C)
+#### Algorithms
 
 __Actor-Critic__:
     - The _actor_ learns a policy(strategy)
@@ -99,6 +99,7 @@ __Actor-Critic__:
 
 __Advantage Function__:
     - this function is used to compute the policy gradient.
+    - It quantifies how much better or worse a particular action is compared to the average action.
     - Guides the actor to select actions with better outcomes
     - Adresses credit assignment problem by providing feedback on quality of chosen actions.
     - Calculated as :
@@ -108,4 +109,43 @@ __Advantage Function__:
           - _V-Value(critic value)_ = expected cumulative reward from a particular state onwards using a policy x
 
 __Proximal Policy Optimization(PPO)__:
+    - This is an _on-policy RL algorithm_ that optimizes the agent's policy to maximize expected cumulative reward.
+    - It iteratively collect data through environment interactions and updating the policy for performance improvement.
+    - Basically it optimizes and improves the policy by looking at the state.
+    - Maintains a probability distribution over actions for each state repped by a Neural Network.
+    - The algo computes the surrogate objective to guide policy gradien for actions with higher returns and the clipped objective to limit policy updates to maintain stable training
+    - It adresses theissues of high variance and unstable learning through policy update constraints.
+    - It also creates a balance between exploration and exploitation by policy optimization through data.
+    - The loss is calculated as follows:
+        $𝐿(𝜃)=𝔼𝑡 [𝑚𝑖𝑛(𝑟𝑡(𝜃)𝐴̂𝑡,clip(𝑟𝑡(𝜃),1−𝜖,1+𝜖)𝐴̂𝑡)−𝛽ℋ(𝜋𝜃(⋅|𝑠𝑡))]$
+        $𝑟𝑡(𝜃)= 𝜋𝜃(𝑎𝑡|𝑠𝑡)/𝜋𝜃old(𝑎𝑡|𝑠𝑡)$
+
+        Where:
+            - __$clip(x,a,b)$__ = a clipping function that clips the value $x$ to the range $[a,b]$.
+            - __$ℋ(𝜋𝜃(⋅|𝑠𝑡))$__ = represents entropy of the policy
+            - __$𝑟𝑡(𝜃)$__ = ratio of probability of new policy to the old policy.
+
+__Asynchronous Advantage Actor-Critic(A3C)__:
+    - This is an advanced variant of the Actor-Critic architecture.
+    - The advantage in this algo refres to the advantage function
+    - In A3C, multiple local workers run in parallel with their copy of the policy network and environment, collecting experiences and updating global networks asyncrhonously enabling eficient resource utilization, faster convergence , better exploration and more sample-efficient learning.
+    - Accumulate gradients with respect to local policy network parameters $𝜃′$ using policy gradient and advantage estimation are calculated as:
+        $𝛻𝜃′𝑙𝑜𝑔𝜋(𝑎𝑖|𝑠𝑖;𝜃′)(𝑅−𝑉(𝑠𝑖;𝜃𝑣′))$
+    With:
+      - $𝜃′v = 𝜕(𝑅−𝑉(𝑆𝑖;𝜃𝑣′))2/𝜕𝜃𝑣$
+        - This is how accumulated gradient are calculated with respect to local value network.
+        - THis is done using the squared temporal difference error.
+        - $(𝑅𝑡 −𝑉(𝑠_𝑡))$ = the difference between the estimated value $V(s_t)$ and the observed reward $R_t$
+        - THe $$𝜕/𝜕𝜃_𝑣′$  = the partial derivative with respect to the parameter $𝜃_𝑣′$ and is used to show how small a change in this parameter affects the expression.
+      - R is the total discounted return
+      - $𝑅 ←𝑟𝑖 +𝛾𝑅$
+        - $r_i$ = immediate reward at time step $i$
+        - $𝛾$ = discount factor to dicount values of furture rewards
+    - The __Policy loss(actor loss)__ for the N time steps in A3C is computed as:
+      $𝐿policy =−1/𝑁 *∑^N𝑡=1𝑙𝑜𝑔𝜋(𝑎𝑡|𝑠𝑡)⋅𝐴𝑡$
+    - The __Value loss(critic loss)__ guides the value function towards better approximations of the expected return (R).
+      - It is the mean squared error between the estimated value function (V) and actual return.
+      - THe value loss for N time steps is calculated as:
+            $𝐿critic = 1/𝑁∑^N𝑖=1(𝑅𝑖 −𝑉(𝑠𝑖;𝜃𝑣))^2$
+
     
