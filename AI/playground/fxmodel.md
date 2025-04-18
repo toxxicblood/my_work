@@ -113,12 +113,21 @@ __Advantage Function__:
 __Proximal Policy Optimization(PPO)__:
 
 - This is an _on-policy RL algorithm_ that optimizes the agent's policy to maximize expected cumulative reward.
+A good way to explain this is to imagine you are playing a game. In this game you try different moves, some moves get you points, others dont.
+What PPO does is like a coach, it watches how you play then gives hints on what moves you should try next making sure it's not too adventurous.
 - It iteratively collect data through environment interactions and updating the policy for performance improvement.
 - Basically it optimizes and improves the policy by looking at the state.
 - Maintains a probability distribution over actions for each state repped by a Neural Network.
+For better understanding, think of the policy as your game plan(described by a Neural Network) that tells you how to move.
+When you play the gam, you try different moves. Good moves give you points others dont.
+The PPO algo collects __all__ information from your plays and learns which moves lead to a win.
+From this collected data, instead of making full game plan changes, it adjusts the plan in a small way, like making a duck instead of a dive. Or jumping a lil higher.
+
 - The algo computes the surrogate objective to guide policy gradien for actions with higher returns and the clipped objective to limit policy updates to maintain stable training
-- It adresses theissues of high variance and unstable learning through policy update constraints.
+The clipping function ensures the changes/updates are small so the new game  plan isn't too different from the old one
+- It adresses the issues of high variance and unstable learning through policy update constraints.
 - It also creates a balance between exploration and exploitation by policy optimization through data.
+It makes sure you dont just stick to the same moves you know, but explore new ones too, making you better at the game over time.
 - The loss is calculated as follows:
     $𝐿(𝜃)=𝔼𝑡 [𝑚𝑖𝑛(𝑟𝑡(𝜃)𝐴̂𝑡,clip(𝑟𝑡(𝜃),1−𝜖,1+𝜖)𝐴̂𝑡)−𝛽ℋ(𝜋𝜃(⋅|𝑠𝑡))]$
     $𝑟𝑡(𝜃)= 𝜋𝜃(𝑎𝑡|𝑠𝑡)/𝜋𝜃old(𝑎𝑡|𝑠𝑡)$
@@ -132,7 +141,11 @@ __Asynchronous Advantage Actor-Critic(A3C)__:
 
 - This is an advanced variant of the Actor-Critic architecture.
 - The advantage in this algo refres to the advantage function
-- In A3C, multiple local workers run in parallel with their copy of the policy network and environment, collecting experiences and updating global networks asyncrhonously enabling eficient resource utilization, faster convergence , better exploration and more sample-efficient learning.
+- In A3C, multiple local workers run in parallel with their copy of the policy network and environment, collecting experiences and updating global networks asyncrhonously enabling efficient resource utilization, faster convergence , better exploration and more sample-efficient learning.
+This can be related to being in a gaming group with your friends, all playing the same game level.
+In this algorithm, there are many _"worker agents"_ (like players) that each try out different moves/strategies __independently__
+After each attempt in the level("environment") they update a global network(like a group strategy) on their experiences wether good or bad, helping create a better/the best plan to beat the level.
+
 - Accumulate gradients with respect to local policy network parameters $𝜃′$ using policy gradient and advantage estimation are calculated as:
     $𝛻𝜃′𝑙𝑜𝑔𝜋(𝑎𝑖|𝑠𝑖;𝜃′)(𝑅−𝑉(𝑠𝑖;𝜃𝑣′))$
 With:
@@ -161,3 +174,100 @@ In the asynchronous updating process of the global worker from local workers, th
     $𝜃^′v:𝑑𝜃𝑣 ←𝑑𝜃𝑣 +𝜕(𝑅−𝑉(𝑠𝑖;𝜃^′v))2/𝜕𝜃^′v$
 
   - Assuming the $𝜃$ and $𝜃v$ are the shared params of the global worker , $𝜃^′$ and $𝜃^′v$ represent local worker params based on the S3 algorithm.
+
+Imagine two different players at each gaming setup.(one play station per pair)
+They each have a different role let's call them Player 1 and player 2:
+__THe actor__: this is player 1. He decides the moves to make(actively playing)
+__The critic__: this is player 2. He is  more experienced in the game and watches player 1. He tells player 1 if the moves he makes are good or bad(critiques moves) thus helping player 1 improve his strategy.
+
+__Asynchronous workers__: A3C lets many teams of this player 1,2 combo to work at the same time.
+Each team interacts with the same game(learns the environment) at their own pace.
+Later they share their best tips with the whole group, thus supercharging the group's learning.
+With these lessons they update the __global plan__ which gets better with each update from each team.
+
+
+#### Methodology
+
+__Data Preparation__:
+
+- Time frame = H1
+
+- Due to price fluctuations and recurring patterns, using raw candlestick data is inefficient.
+- To mitigate this, the follwoing method is used.
+$𝑥1𝑡=𝑃𝑐𝑡−𝑃𝑐𝑡−1/𝑃𝑐𝑡−1
+𝑥2𝑡=𝑃ℎ𝑡−𝑃ℎ𝑡−1/𝑃ℎ𝑡−1
+𝑥3𝑡=𝑃𝑙𝑡−𝑃𝑙𝑡−1/𝑃𝑙𝑡−1
+𝑥4𝑡=𝑃ℎ𝑡−𝑃𝑐𝑡/𝑃𝑐𝑡
+𝑥5𝑡=𝑃𝑐𝑡−𝑃𝑙𝑡/𝑃𝑐𝑡
+𝑋𝑡=[𝑥1𝑡,𝑥2𝑡,𝑥3𝑡,𝑥4𝑡,𝑥5𝑡](9)
+𝑋=[𝑋𝑡−𝑤𝑖𝑛𝑑𝑜𝑤,...,𝑋𝑡−2,𝑋𝑡−1,𝑋𝑡](10)$
+- This method utilizes the ratio of candlestick changes from ts data to create 5 new features.
+
+__Reward function__:
+
+- Agent evaluation carried out through rewards from the environment.
+- Through interacting with the environment, the agent receives rewards based on the decision it made :
+  - Profitable = +ve reward
+  - Loss = -ve reward.
+- THe received reward is a normalized value determined by  the price changes in consecutive candlestick closing prices within 2 successive time intervals.
+$𝑧𝑡=𝑃𝑐𝑡−𝑃𝑐𝑡−1 / 𝑃𝑐𝑡−1$
+
+- Value is as follows($𝛿_𝑡$):
+  - 1 -> long trade
+  - -1 -> short trade
+  - 0 -> position exit or staying out
+THus:
+$r_t = 𝛿_t * z_t$
+- The primary objective of this work is to highlight training time efficiency and optimal policy learning.
+- Assumptions made:
+  - No commissions
+  - No spread
+- Rewards calculated based on closing price
+
+----
+__Proposed RL model__:
+
+The main interaction is btw the agent and environment.
+
+- _Observation space_:
+  - prepping historical financial market data
+    - $𝑋=[𝑋𝑡−𝑤𝑖𝑛𝑑𝑜𝑤,...,𝑋𝑡−2,𝑋𝑡−1,𝑋𝑡]$
+  - Trading decisions made within specified past window tf categorised into:
+    - Opening long
+    - Opening short
+    - Closing existing
+    - Staying out
+- _Action space_: interacting with received trading decisions.
+
+Agent receives observation state, makes trading decision and receives a reward from the environment based on profit or loss
+
+_Model Structure_:
+
+![_Model Structure_](image.png)
+
+A uniform NN model was used for both algorithms. The model's  input  consists  of  two  parts:  the  first  part  contains  an LSTM layer for normalized time series data(10), and the second part is  a  linear  layer  for  the  one-hot  encoded  trading  decisions made within a chosen time interval of a specific window size.The number of neurons in the hidden LSTM layer is set to 128, The  output  from  the  LSTM  is  first  passed  through  a  layer consisting  of  32  neurons.  Then,  it  is  combined  with  the  trading decisions from  previous  steps,  based  on  window  size, and  fed into a fully connected (FC) layer.The  output  from  the  previous steps  is  combined  and  sent  to a FC layer with 64 neurons. This FC layer then sendsthe output to either  an  actor  or  critic  FC  layer,  depending  on  whether  it's  for trading  decisions  or  evaluation.  The  actor  FC  layer's  output represents the number of trading decisions made, while the critic FC layer's output is used to evaluate the actor's performance
+
+Actor critic scheme.
+![A3c model](image-1.png)
+
+Data obtained from Mt5
+
+__Evaluation Metrics__:
+
+_Return_ : strategy's profitability = $((final price - Initial price) / initial price ) * 100$
+_Sharpe ratio_ : risk vs return =  $𝑅_𝑝 / 𝜎_𝑝$
+  𝑅𝑝 = returns
+  𝜎𝑝 = standard deviation of returns
+_Profit factor_  : money made vs lost
+_Max Drawdown_ : largest loss
+
+__Parameters__:
+
+- _Discount factor_ = 0.99
+- _Learning rate_ = 0.00004
+- _Time window_ = 16
+
+__F. Multi-Agent training(MA)__
+TheMA training  process  follows  the  same  parameters  and conditions as SA. Five local workers are employed for parallel training  to  speed  up  the  learning  process.  Each  local  worker undergoes 20 training steps before updating the global worker. This  process  continues  until  the  end  of  one  episode,  after which a new episode begins.During the training with A3C, two different approacheswere examined.    In    the MA-Lock,    a    lock    mechanism    was implemented,  which  allowed  only  one  local  worker  at  a  time to make updates to the global worker. the MA-NoLockdidnot have  a  locking  mechanismandmultiple  local  workers  could interact  with  the  environment  and  concurrently  share  updates with   the   global   worker   without   any   conflicts.   Also,   an optimizer  with  shared  parameters  was  implemented  across  all workers
+
+Ma- Lock outperforms
