@@ -3,8 +3,18 @@ import pandas as pd
 import datetime
 
 def open_file(file):
-    df = pd.read_csv(file, parse_dates=['Local time'], index_col="Local time" ,dayfirst=True)
-
+    df = pd.read_csv(file, )#parse_dates=['Local time'], index_col="Local time" ,dayfirst=True)
+    datetime_values = []
+    # Convert 'Local time' to datetime objects
+    for value in df['Local time']:
+        converted = None
+        for fmt in ['%d.%m.%Y %H:%M:%S.%f', '%d.%m.%Y %H:%M:%S', '%Y.%m.%d %H:%M:%S', '%Y-%m-%d %H:%M:%S', '%m/%d/%Y %H:%M:%S']:
+            try:
+                converted = pd.to_datetime(value, format=fmt)
+                break
+            except ValueError:
+                pass
+        datetime_values.append(converted)
     #df['Local time'] = pd.to_datetime(df['Local time'], dayfirst = True)
     #df = df.sort_values(by='Local time').dropna()
     return df
@@ -28,6 +38,7 @@ def create_windows(features, window_size=16):
         window = features.iloc[i:i+window_size].values
         data.append(window)
     return np.array(data)
+
 
 # Example usage
 # features_df = compute_features(your_candlestick_dataframe)

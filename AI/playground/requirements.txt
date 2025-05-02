@@ -1,0 +1,7 @@
+pandas
+numpy
+gym
+torch
+matplotlib
+stable-baelines3
+# pip install -r requirements.txt

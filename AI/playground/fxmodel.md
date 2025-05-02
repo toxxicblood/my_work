@@ -270,4 +270,21 @@ __Parameters__:
 __F. Multi-Agent training(MA)__
 TheMA training  process  follows  the  same  parameters  and conditions as SA. Five local workers are employed for parallel training  to  speed  up  the  learning  process.  Each  local  worker undergoes 20 training steps before updating the global worker. This  process  continues  until  the  end  of  one  episode,  after which a new episode begins.During the training with A3C, two different approacheswere examined.    In    the MA-Lock,    a    lock    mechanism    was implemented,  which  allowed  only  one  local  worker  at  a  time to make updates to the global worker. the MA-NoLockdidnot have  a  locking  mechanismandmultiple  local  workers  could interact  with  the  environment  and  concurrently  share  updates with   the   global   worker   without   any   conflicts.   Also,   an optimizer  with  shared  parameters  was  implemented  across  all workers
 
-Ma- Lock outperforms
+Ma- Lock outperformsa
+
+## Project structure
+
+project/
+├── data/
+│   └── forex.csv          # your raw CSV
+├── src/
+│   ├── envs/
+│   │   └── multi_tf_env.py
+│   ├── agents/
+│   │   └── dqn_agent.py
+│   ├── train.py
+│   ├── evaluate.py
+│   └── utils.py
+└── notebooks/
+    └── exploration.ipynb  # optional EDA + viz
+

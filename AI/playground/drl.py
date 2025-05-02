@@ -2,6 +2,7 @@ import dataprep as dp
 import gymnasium
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def main():
     # A - Ask
@@ -21,8 +22,7 @@ def main():
     test_data = df.loc["2024-07-01":"2025-03-22"]
     train_features = dp.compute_features(train_data)
     test_features = dp.compute_features(test_data)
-    print (train_features)
-    print (test_features)
+
 
     train_windows = dp.create_windows(train_features)
     test_windows = dp.create_windows(test_features)
