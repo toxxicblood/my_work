@@ -17,7 +17,7 @@ def main():
 
     #for now i will use the hourly ask data to train the model
     df = df_HA
-    print (df)
+    #print (df)
     train_data = df.loc["2020-01-01":"2024-06-30"]
     test_data = df.loc["2024-07-01":"2025-03-22"]
     train_features = dp.compute_features(train_data)
@@ -27,9 +27,11 @@ def main():
     train_windows = dp.create_windows(train_features)
     test_windows = dp.create_windows(test_features)
 
-
+    print("Train windows shape:", train_windows.shape)
+    #print("feature shape:", train_features.shape)
     # windows = np.array(windows)
     # windows are an NP array.
+    
 
 
 
