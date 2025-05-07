@@ -289,7 +289,7 @@ project/
 
 ## Project progress notes
 
-### Project setup.
+### Project setup
 
 - Downloading the required libraries and other dependencies.
 
@@ -301,4 +301,12 @@ project/
 - That is training data spanning 4 years and testing data spanning 10 months..
 - The dates are adjusted for a GMT+3 timezone meaning its adjusted for nairobi.
 - Im going to be using XAUUSD data to see how the algo performs on Gold.
-- Im also going to include multiple timeframes.
+- Im also going to include multiple timeframes but i will add this feature later.
+- I calculated the five features as shown in the paper.
+
+### Gym env
+
+I want to create a single tf env with multitimeframe wrappers
+
+- This is the reward function.
+- 
