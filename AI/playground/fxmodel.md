@@ -185,7 +185,6 @@ Each team interacts with the same game(learns the environment) at their own pace
 Later they share their best tips with the whole group, thus supercharging the group's learning.
 With these lessons they update the __global plan__ which gets better with each update from each team.
 
-
 #### Methodology
 
 __Data Preparation__:
@@ -288,3 +287,18 @@ project/
 └── notebooks/
     └── exploration.ipynb  # optional EDA + viz
 
+## Project progress notes
+
+### Project setup.
+
+- Downloading the required libraries and other dependencies.
+
+### Data preprocessing
+
+- Loading the data into my working memory and parsing the dates.
+- I use pandas for this.
+- Also splitting the data into training and testing data with training data from 1-1-2020 to 30-6-2024 and testing data spanning 1-7-2024 to 30-4-2025
+- That is training data spanning 4 years and testing data spanning 10 months..
+- The dates are adjusted for a GMT+3 timezone meaning its adjusted for nairobi.
+- Im going to be using XAUUSD data to see how the algo performs on Gold.
+- Im also going to include multiple timeframes.

@@ -30,3 +30,4 @@ class ForexEnv (gym.Env):
         self.idx += 1
         done = self.idx >= len(self.df)
         return self._get_obs(), reward, done, {}
+        
