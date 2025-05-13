@@ -129,17 +129,62 @@ __Small learning rates__ = slow convergence and gets stuck in false local minima
 __Large learning rates__ = overshoot, unstable learning and divergence
 __Stable learning rates__ = smooth convergence and avoids local minima
 
-To best optimise learnig rates is by building _adaptive algorithms_ that adapt the learning rate to the landscape
+To best optimize learning rates is by building _adaptive algorithms_ that adapt the learning rate to the landscape
 This means learning rate isn't fixed but can be changed according to the following:
-    - how large thee gradient is
-    - how fast learnging is happening
+    - how large the gradient is
+    - how fast learning is happening
     - weights etc
 
-Here are a few adaptive learnign rate algrithms:
+Here are a few adaptive learning rate algorithms:
 ![rate](image-32.png)
 
 In summary:
 ![alt text](image-33.png)
 
 ### 2. Mini batches
+
+#### Stochastic gradient descent algo
+
+Gradient descent is computed as a function/average of all data points in the data set which can be very computationally intensive. (we compute the gradient of all data points not just one.)
+
+Instead we can use __stochastic gd__:
+Here instead of computing the gradient over all data points we compute it from one data point.
+Though this is way noisier we save on time and compute but we sacrifice accuracy in the process.
+
+The middle ground here is mini-batch gradient descent.
+Here we use mini batches to compute our gradient thus eliminating the inefficiency of vanilla gradient descent and the noise/inaccuracy of the stochastic gradient descent.
+
+### Mini batches while training
+
+- More accurate gradient estimation
+- Smoother convergence
+- Larger learning rates
+
+The relationships between gradients and learning rates is extremely connected.
+_With more stable gradients, we can begin to take bigger steps.
+With minibatches we can also parallelise traning achieving higher speeds by utilising GPUs_
+
+### Overfitting
+
+In model training we dont want our models to work extremely well only on our training sets but also to generalise to our testing set.
+Overfitting is the problem where an algorithm learns the data too well which may lead to it just saving the data to memory rather than learning the patterns.
+How well the model perorms on a trainig set is used as a proxy for how well it will work on real time data.
+- As a "by the way" your model's complexity should match the complexity of the patterns you want to extract from your data and shouldn't be too complex or too simple.
+
+### Regularisation
+
+This is a technique used to improve our model's generalisation to real world and unseen data.
+
+#### Dropout
+
+This is where during training we randomly set some node's activations to 0
+Tipically we drop 50% of each layer
+This forces the network not to rely on any 1 or more nodes.
+
+#### Early stopping
+
+This is where we monitor the deviation between our training loss and testing loss and we stop training before we have a chance to overfit.
+When the deviation increases we stop training.
+
+# Deep sequence modelling
 
