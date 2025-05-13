@@ -41,3 +41,105 @@ __Tensorflow__:![Dense](image-10.png)   __Pytorch__:![Dense](image-11.png)
 
 Normally though, all we need to do is call it.
 ![Call](image-12.png)
+
+### Multi layer neural network(Deep neural networks)
+
+This is a neural network with any number of  __hidden__ layers.
+THe layers are hidden because we dont control the values in the layers.
+![Hidden layers](image-13.png)
+Each neuron in the hidden layer is a perceptron
+
+To build a neural network:
+![alt text](image-14.png)
+
+In deep neural networks  the output is formed by a deep combination of linear followed by nonlinear functions.![deep neual net](image-15.png)
+
+THe more complex the task, the deeper the neural network should be.
+
+## Applying neural networks
+
+### Loss
+
+- This is the measure of the cost incurred from incorrect predictions
+  ![loss](image-16.png)
+  THe smaller the loss the better the neural network.
+  __Empirical loss__: measure of total loss over our entire dataset
+  ![Empirical loss](image-17.png)
+  We want neural networks that minimise loss
+  __Binary(Softmax) crossentropy loss__: can be used with models that output a probability between 0 and 1:
+  Ite measures the distance between two probability distributions
+  ![Crossentroppy](image-18.png)
+  __Mean squared error loss__: used with regression models that output continuous real numbers.
+  it measures the distance between the predicted number and true number.
+  ![mean squared err](image-19.png)
+
+### Training neural netwrks
+
+Ultimately we want to find the network whose weights _achieve the lowest loss_
+![nn](image-20.png)
+Our aim is loss minimisation.
+
+#### Loss optimisation
+
+The loss function is just a function of our weights
+If we only had two weights we can plot them and see which configuration gives the lowest loss:
+![loss](image-21.png)
+In the above landscape we want to find the lowest point(which weight configuration give the lowest loss)
+Process:
+
+    Randomly pick an initial starting position$(W_0, W_1)$
+        Compute the gradient(which way is up locally)![gradient](image-22.png)
+        Take a small step int the opposite direction of gradient.
+The above algorithm is known as __Gradient descent__
+![gradient](image-24.png)
+
+The process of computing the gradient is called __Back propagation__
+
+#### Back Propagation
+
+How does a small change in one weight affect the final loss?
+![backprop](image-25.png)
+We can write out the derivative and use the chain rule to decompose it:
+![chain rule](image-26.png)
+If we want to do the same thing for W1
+![alt text](image-27.png)
+
+We start from te output and keep computing the iterative chain rules till we get to  the beginning.
+![alt text](image-28.png)
+We repeat this for every weight in our netwrk using gradients from later layers.
+
+- Back propagation is basically an application of the _chain rule_ from _differential calculus_
+
+### Neural netwiorks in practice
+
+#### 1. Optimisation
+
+ in reality training and optimising neural netwirks is difficult and takes alot of compute.
+ Here is a plot of some real world data.
+ ![loss landcape](image-29.png)
+
+Optimisation through gradient descent is done as follows:
+![alt text](image-30.png)
+
+Now we focus on the learning rate:
+![rate](image-31.png)
+
+- learning rate dictates how quickly we take the steps and how quickly we learn from our gradients.
+__Small learning rates__ = slow convergence and gets stuck in false local minima
+__Large learning rates__ = overshoot, unstable learning and divergence
+__Stable learning rates__ = smooth convergence and avoids local minima
+
+To best optimise learnig rates is by building _adaptive algorithms_ that adapt the learning rate to the landscape
+This means learning rate isn't fixed but can be changed according to the following:
+    - how large thee gradient is
+    - how fast learnging is happening
+    - weights etc
+
+Here are a few adaptive learnign rate algrithms:
+![rate](image-32.png)
+
+In summary:
+![alt text](image-33.png)
+
+### 2. Mini batches
+
