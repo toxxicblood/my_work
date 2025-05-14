@@ -146,15 +146,17 @@ In summary:
 #### Stochastic gradient descent algo
 
 Gradient descent is computed as a function/average of all data points in the data set which can be very computationally intensive. (we compute the gradient of all data points not just one.)
-
+![alt text](image-34.png)
 Instead we can use __stochastic gd__:
 Here instead of computing the gradient over all data points we compute it from one data point.
 Though this is way noisier we save on time and compute but we sacrifice accuracy in the process.
-
+![alt text](image-35.png)
 The middle ground here is mini-batch gradient descent.
 Here we use mini batches to compute our gradient thus eliminating the inefficiency of vanilla gradient descent and the noise/inaccuracy of the stochastic gradient descent.
 
 ### Mini batches while training
+
+![alt text](image-36.png)
 
 - More accurate gradient estimation
 - Smoother convergence
@@ -167,8 +169,10 @@ With minibatches we can also parallelise traning achieving higher speeds by util
 ### Overfitting
 
 In model training we dont want our models to work extremely well only on our training sets but also to generalise to our testing set.
+![alt text](image-37.png)
 Overfitting is the problem where an algorithm learns the data too well which may lead to it just saving the data to memory rather than learning the patterns.
 How well the model perorms on a trainig set is used as a proxy for how well it will work on real time data.
+
 - As a "by the way" your model's complexity should match the complexity of the patterns you want to extract from your data and shouldn't be too complex or too simple.
 
 ### Regularisation
@@ -177,14 +181,52 @@ This is a technique used to improve our model's generalisation to real world and
 
 #### Dropout
 
+![alt text](image-38.png)
 This is where during training we randomly set some node's activations to 0
 Tipically we drop 50% of each layer
 This forces the network not to rely on any 1 or more nodes.
 
 #### Early stopping
 
+![alt text](image-39.png)
 This is where we monitor the deviation between our training loss and testing loss and we stop training before we have a chance to overfit.
 When the deviation increases we stop training.
 
-# Deep sequence modelling
+## Deep sequence modelling
 
+In sequence modelling we give an agent a past history of an object/ subject and tell it to predict where the thing is going next.
+This is mostly done with data that occurs sequentially like speech, text, images and music etc
+
+Sequential data like text can be split up into chunks called tokens.
+These can vary in size from single character, words or even phrases being used as tokens to tranin different models.
+
+### Sequence modelling applications
+
+Here instead of binary classificatin which is one to one
+We may have :
+sentiment analsis -> many to one classification
+Image captioning -> one to many
+machine translation -> many to many
+![alt text](image-40.png)
+
+### Neural networks with recurrence
+
+We can simplify the perceptron into the following:
+![alt text](image-41.png)
+This forms a neural network with multiple inputs and outputs and hidden layers:
+![alt text](image-42.png)
+This can be simplified into the following:
+![alt text](image-43.png)
+Which can be translated vertically:
+Thus timesteps can be added for sequential data due to the inherent dependence between each sequence of the data.
+We want the networks internal computations at eah individual timestep to prior computations of the previous timesteps.
+We want to feed forward this information to each subsequent timestep
+This is done as follows:
+![alt text](image-44.png)
+THe state h is passed onwards from timestep to timestep.
+
+- The output produced is a function not only of the current inputs but also the previous states in the sequence.
+- Recurrence can be simplified into the following image:
+![alt text](image-45.png)
+
+### Recurrent neural networks
