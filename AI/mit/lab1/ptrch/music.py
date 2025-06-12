@@ -96,7 +96,7 @@ class LSTMModel(nn.Module):
 
 #instantiating  the model with default parameters
 vocab_size = len(vocab)
-embedding_dim = 256
+embedding_dim = 256.,,,,,,,,,
 hidden_size = 1024
 batch_size = 8
 
@@ -254,7 +254,7 @@ for iter in tqdm(range(params["num_training_iterations"])):
 
     #update progress bar and visualise within notebook
     history.append(loss.item())
-    plotter.plot(history, label='loss')
+    plotter.plot(history)
 
     #save model checkpoint
     if iter % 100 ==0:
@@ -283,10 +283,12 @@ def generate_song(model, start_string, genration_length= 1000):
         predictions, hidden_state = model(input_idx, state, return_sate=True)
 
         #remove batch dimension
-        predictions = predictions.squeeze(0)
+        predictions = predictions[:, -1, :]
+        probs = torch.softmax(predictions, dim=-1)
+        input_idx = torch.multinomial(probs, num_samples=1)
 
         #use a moltinominal dist to sample over probabilities
-        input_idx = torch.multinomial(torch.softmax(predictions[-1], dim=-1), num_samples=1)
+        #input_idx = torch.multinomial(torch.softmax(predictions[-1], dim=-1), num_samples=1)
 
         #add predicted char to generated text
         text_generated.append(idx2char[input_idx.item()])
@@ -294,7 +296,7 @@ def generate_song(model, start_string, genration_length= 1000):
 
 #use model and function to generate as ong of len 1000
 #abc files start with x and this might be a goot start string
-generated_text = generated_text(model, start_string="X", genration_length=1000)
+generated_text = generate_song(model, start_string="X", genration_length=1000)
 
 #play back generated music
 generated_songs = mdl.lab1.extract_song_snippet(generated_text)
@@ -312,4 +314,6 @@ for i, song in enumerate(generated_songs):
         write(wav_file_path, 88200, numeric_data)
 
         #save song to comet interface
-        experiment.log_assert(wav_file_path)
+        experiment.log_audio(wav_file_path)
+
+experiment.end()
