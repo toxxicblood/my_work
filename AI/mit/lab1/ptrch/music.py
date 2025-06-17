@@ -14,6 +14,7 @@ import functools
 from IPython import display as ipythondisplay
 from tqdm import tqdm
 from scipy.io.wavfile import write
+#from google.colab import files
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 assert COMET_API_KEY != "", "please load your api key"
@@ -74,17 +75,17 @@ class LSTMModel(nn.Module):
         self.hidden_size = hidden_size
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         #add a dropout layer
-        self.lstm = nn.LSTM(embedding_dim, hidden_size, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_size,num_layers=2, batch_first=True, dropout=0.2)
         self.fc = nn.Linear(hidden_size, vocab_size)
 
     def init_hidden(self, batch_size, device):
         #initialize hidden state and cell sstate to zeros
         #return (torch.zeros(1, batch_size, self.lstm.hidden_size, device=device),
               #  torch.zeros(1, batch_size, self.lstm.hidden_size, device=device))
-        return [torch.zeros(1, batch_size, self.hidden_size).to(device),
-                torch.zeros(1, batch_size, self.hidden_size).to(device)]
+        return [torch.zeros(2, batch_size, self.hidden_size).to(device),
+                torch.zeros(2, batch_size, self.hidden_size).to(device)]
 
-    def forward(self, x, state=None, return_sate=False):
+    def forward(self, x, state=None, return_state=False):
         x = self.embedding(x)
 
         if state is None:
@@ -92,19 +93,19 @@ class LSTMModel(nn.Module):
         out, state = self.lstm(x, state)
 
         out = self.fc(out)
-        return out if not return_sate else (out, state)
+        return out if not return_state else (out, state)
 
 #instantiating  the model with default parameters
 vocab_size = len(vocab)
-embedding_dim = 256.,,,,,,,,,
+embedding_dim = 256
 hidden_size = 1024
 batch_size = 8
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = LSTMModel(vocab_size, embedding_dim, hidden_size).to(device)
+#model = LSTMModel(vocab_size, embedding_dim, hidden_size).to(device)
 
 #print out the model summary
-print(model)
+#print(model)
 
 #its always good ot run a few simple check on the model to see that it runs as expected.
 # Test the model with some sample data
@@ -112,20 +113,20 @@ x, y = get_batch(vectorized_songs, seq_length=100, batch_size=32)
 x = x.to(device)
 y = y.to(device)
 
-pred = model(x)
-print("Input shape:      ", x.shape, " # (batch_size, sequence_length)")
-print("Prediction shape: ", pred.shape, "# (batch_size, sequence_length, vocab_size)")
+#pred = model(x)
+#print("Input shape:      ", x.shape, " # (batch_size, sequence_length)")
+#print("Prediction shape: ", pred.shape, "# (batch_size, sequence_length, vocab_size)")
 
 #untrained model predictions
 
-sampled_indices = torch.multinomial(torch.softmax(pred[0],dim=-1), num_samples=1)
-sampled_indices = sampled_indices.squeeze(-1).cpu().numpy()
-sampled_indices
+#sampled_indices = torch.multinomial(torch.softmax(pred[0],dim=-1), num_samples=1)
+#sampled_indices = sampled_indices.squeeze(-1).cpu().numpy()
+#sampled_indices
 
 #decode to txt:
-print("Input: \n", repr("".join(idx2char[x[0].cpu()])))
-print()
-print("Next Char Predictions: \n", repr("".join(idx2char[sampled_indices])))
+#print("Input: \n", repr("".join(idx2char[x[0].cpu()])))
+#print()
+#print("Next Char Predictions: \n", repr("".join(idx2char[sampled_indices])))
 #undtrained model predictioins are noisy and nonsensical
 
 #model training
@@ -152,11 +153,11 @@ def compute_loss(labels, logits):
 
 #compute los on predictions from untrained model
 y.shape #(batch_size, sequence_length)
-pred.shape #(batch_size, sequence_length, vocab_size)
+#pred.shape #(batch_size, sequence_length, vocab_size)
 #compute loss using true next chars and predictions several cells above
-example_loss = compute_loss(y, pred)
-print(f"Prediction shape: {pred.shape} # (batch_size, sequence_length, vocab_size)")
-print(f"scalar_loss:      {example_loss.mean().item()}")
+#example_loss = compute_loss(y, pred)
+#print(f"Prediction shape: {pred.shape} # (batch_size, sequence_length, vocab_size)")
+#print(f"scalar_loss:      {example_loss.mean().item()}")
 
 
 ###hyperparameter setting and optimisation
@@ -164,9 +165,9 @@ vocab_size = len(vocab)
 
 #model parametrs
 params = dict(
-    num_training_iterations = 3000, # increase to traing longer
-    batch_size = 8, #experiment btw 1 and 64
-    seq_length = 100, # experiment between 50 and 500
+    num_training_iterations = 800, # increase to traing longer
+    batch_size = 64, #experiment btw 1 and 64
+    seq_length = 450, # experiment between 50 and 500
     learning_rate = 5e-3, # experiment between 1e-5 and Ie-I
     embedding_dim = 256,
     hidden_size = 1024, #experiment betweeen 1 and 2048
@@ -202,7 +203,7 @@ def create_experiment():
 
 
 ### define optimizer and trainingoperation###
-#instaniiate a new lstm model for training using hyperparams
+#instaniitate a new lstm model for training using hyperparams
 model = LSTMModel(
     vocab_size=params['vocab_size'],
     embedding_dim=params['embedding_dim'],
@@ -230,6 +231,7 @@ def train_step(x,y):
     #Step 1: backpropageate loss
     #step 2: update model params using optimizer
     loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)  # gradient clipping
     optimizer.step()
     return loss
 
@@ -238,13 +240,16 @@ history = []
 plotter = mdl.util.PeriodicPlotter(sec = 2, xlabel='Itarations', ylabel='loss')
 experiment = create_experiment()
 
+best_loss = float('inf')
+best_ckpt_path = os.path.join(checkpoint_dir, "best_model.pth")
+
 if hasattr(tqdm, '_instances'): tqdm._instances.clear() #clear if it exists
 for iter in tqdm(range(params["num_training_iterations"])):
     #grab a batch and propagate it through the network.
     x_batch, y_batch = get_batch(vectorized_songs, params['seq_length'], params['batch_size'])
 
-    x_batch = torch.tensor(x_batch, dtype=torch.long).to(device)
-    y_batch = torch.tensor(y_batch, dtype=torch.long).to(device)
+    x_batch = x_batch.to(device)
+    y_batch = y_batch.to(device)
 
     #take a train step
     loss = train_step(x_batch, y_batch)
@@ -256,47 +261,66 @@ for iter in tqdm(range(params["num_training_iterations"])):
     history.append(loss.item())
     plotter.plot(history)
 
-    #save model checkpoint
+    #save regular model checkpoint
     if iter % 100 ==0:
         torch.save(model.state_dict(), checkpoint_prefix)
 
+    #save best checkpoint if loss improves
+    if loss.item() < best_loss:
+        best_loss = loss.item()
+        torch.save(model.state_dict(), best_ckpt_path)
+        print(f"New best model saved at iteration {iter} with loss {best_loss:.4f}")
+
 #save the final trained model
 torch.save(model.state_dict(), checkpoint_prefix)
+#save model state dict:
+#torch.save(model.state_dict(), best_ckpt_path)
+#files.download("music_model.pth")
+#files.download(os.path.join(checkpoint_dir, "best_model.pth"))
 experiment.flush()
 
 
 ###precdiction of a generated song
-def generate_song(model, start_string, genration_length= 1000):
+def generate_text(model, start_string, generation_length= 1000):
     #eval step
     input_idx = vectorize_string(start_string)
-    input_idx = torch.tensor([input_idx], dtype=torch.long).to(device)
+    input_idx = torch.tensor(input_idx, dtype=torch.long).unsqueeze(0).to(device)
 
     #initialize hidden state
-    state = model.init_hidden(input_idx.size(0), device)
+    state = model.init_hidden(batch_size= 1, device =device)
 
     #empty string to store our results
     text_generated = []
     tqdm._instances.clear()
 
-    for i in tqdm(range(genration_length)):
-        #evaluate inputs and generate the next char predictions
-        predictions, hidden_state = model(input_idx, state, return_sate=True)
+    with torch.no_grad():
+        for i in tqdm(range(generation_length)):
+            #evaluate inputs and generate the next char predictions
+            predictions, state = model(input_idx, state, return_state=True)
 
-        #remove batch dimension
-        predictions = predictions[:, -1, :]
-        probs = torch.softmax(predictions, dim=-1)
-        input_idx = torch.multinomial(probs, num_samples=1)
+            #remove batch dimension
+            predictions = predictions[:, -1, :]
 
-        #use a moltinominal dist to sample over probabilities
-        #input_idx = torch.multinomial(torch.softmax(predictions[-1], dim=-1), num_samples=1)
-
-        #add predicted char to generated text
-        text_generated.append(idx2char[input_idx.item()])
+            #probs = torch.softmax(predictions, dim=-1)
+            #input_idx = torch.multinomial(probs, num_samples=1)
+            #temperature controls randomness
+            temperature = 0.5
+            #use a moltinominal dist to sample over probabilities
+            input_idx = torch.multinomial(torch.softmax(predictions[-1] / temperature, dim=-1), num_samples=1)
+            input_idx = input_idx.unsqueeze(0)  # Ensure shape is [1, 1]
+            text_generated.append(idx2char[input_idx.item()])
     return start_string + "".join(text_generated)
 
 #use model and function to generate as ong of len 1000
 #abc files start with x and this might be a goot start string
-generated_text = generate_song(model, start_string="X", genration_length=1000)
+#loading model with the best weight
+best_ckpt_path = os.path.join(checkpoint_dir, "best_model.pth")
+model.load_state_dict(torch.load(best_ckpt_path, map_location=device))
+model.eval()
+
+#music generation
+start_string = "X:1\nT:Generated Tune\nM:4/4\nK:C\n"
+generated_text = generate_text(model, start_string=start_string, generation_length=1000)
 
 #play back generated music
 generated_songs = mdl.lab1.extract_song_snippet(generated_text)
@@ -309,11 +333,29 @@ for i, song in enumerate(generated_songs):
         print("Generated song",i )
         ipythondisplay.display(waveform)
 
-        numeric_data = np.formbufer(waveform.data, dtype = np.int16)
+        numeric_data = np.frombuffer(waveform.data, dtype = np.int16)
         wav_file_path = f"output_{i}.wav"
+        #scaled_data = np.int16(waveform.data / np.max(np.abs(waveform.data)) * 32767)
+        #write(wav_file_path, waveform.sample_rate, scaled_data)
+
         write(wav_file_path, 88200, numeric_data)
 
         #save song to comet interface
-        experiment.log_audio(wav_file_path)
+        if os.path.exists(wav_file_path):
+            print(f"File {wav_file_path} exists:", os.path.exists(wav_file_path))
+            print(f"File size: {os.path.getsize(wav_file_path)} bytes")
+
+            experiment.log_audio(wav_file_path, file_name=f"generated_song_{i}.wav", metadata = {"source":"generated"})
+            #time.sleep(120)
+            experiment.flush()
+            #if the above doesnt work try this
+            ##experiment.log_audio(wav_file_path, file_name=wav_file_path, step=i, metadata={"type": "generated_song"})
+
+            print(f"Saved generated song {i} to {wav_file_path}")
+        else:
+            print(f"Failed to save generated song {i} to {wav_file_path}")
 
 experiment.end()
+print("Waiting for Comet uploads to finish...")
+time.sleep(60)
+
