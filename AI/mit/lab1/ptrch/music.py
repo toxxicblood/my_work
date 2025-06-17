@@ -14,7 +14,7 @@ import functools
 from IPython import display as ipythondisplay
 from tqdm import tqdm
 from scipy.io.wavfile import write
-#from google.colab import files
+from google.colab import files
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 assert COMET_API_KEY != "", "please load your api key"
@@ -152,7 +152,7 @@ def compute_loss(labels, logits):
     return loss
 
 #compute los on predictions from untrained model
-y.shape #(batch_size, sequence_length)
+#y.shape #(batch_size, sequence_length)
 #pred.shape #(batch_size, sequence_length, vocab_size)
 #compute loss using true next chars and predictions several cells above
 #example_loss = compute_loss(y, pred)
@@ -255,7 +255,8 @@ for iter in tqdm(range(params["num_training_iterations"])):
     loss = train_step(x_batch, y_batch)
 
     #log the loss to the comet interface
-    experiment.log_metric("loss", loss.item(), step=iter)
+    if iter % 10 == 0:
+        experiment.log_metric("loss", loss.item(), step=iter)
 
     #update progress bar and visualise within notebook
     history.append(loss.item())
@@ -274,88 +275,7 @@ for iter in tqdm(range(params["num_training_iterations"])):
 #save the final trained model
 torch.save(model.state_dict(), checkpoint_prefix)
 #save model state dict:
-#torch.save(model.state_dict(), best_ckpt_path)
-#files.download("music_model.pth")
-#files.download(os.path.join(checkpoint_dir, "best_model.pth"))
+files.download(best_ckpt_path)
+
 experiment.flush()
-
-
-###precdiction of a generated song
-def generate_text(model, start_string, generation_length= 1000):
-    #eval step
-    input_idx = vectorize_string(start_string)
-    input_idx = torch.tensor(input_idx, dtype=torch.long).unsqueeze(0).to(device)
-
-    #initialize hidden state
-    state = model.init_hidden(batch_size= 1, device =device)
-
-    #empty string to store our results
-    text_generated = []
-    tqdm._instances.clear()
-
-    with torch.no_grad():
-        for i in tqdm(range(generation_length)):
-            #evaluate inputs and generate the next char predictions
-            predictions, state = model(input_idx, state, return_state=True)
-
-            #remove batch dimension
-            predictions = predictions[:, -1, :]
-
-            #probs = torch.softmax(predictions, dim=-1)
-            #input_idx = torch.multinomial(probs, num_samples=1)
-            #temperature controls randomness
-            temperature = 0.5
-            #use a moltinominal dist to sample over probabilities
-            input_idx = torch.multinomial(torch.softmax(predictions[-1] / temperature, dim=-1), num_samples=1)
-            input_idx = input_idx.unsqueeze(0)  # Ensure shape is [1, 1]
-            text_generated.append(idx2char[input_idx.item()])
-    return start_string + "".join(text_generated)
-
-#use model and function to generate as ong of len 1000
-#abc files start with x and this might be a goot start string
-#loading model with the best weight
-best_ckpt_path = os.path.join(checkpoint_dir, "best_model.pth")
-model.load_state_dict(torch.load(best_ckpt_path, map_location=device))
-model.eval()
-
-#music generation
-start_string = "X:1\nT:Generated Tune\nM:4/4\nK:C\n"
-generated_text = generate_text(model, start_string=start_string, generation_length=1000)
-
-#play back generated music
-generated_songs = mdl.lab1.extract_song_snippet(generated_text)
-for i, song in enumerate(generated_songs):
-    #synthesize waveform
-    waveform = mdl.lab1.play_song(song)
-
-    #if its a valid song play it
-    if waveform:
-        print("Generated song",i )
-        ipythondisplay.display(waveform)
-
-        numeric_data = np.frombuffer(waveform.data, dtype = np.int16)
-        wav_file_path = f"output_{i}.wav"
-        #scaled_data = np.int16(waveform.data / np.max(np.abs(waveform.data)) * 32767)
-        #write(wav_file_path, waveform.sample_rate, scaled_data)
-
-        write(wav_file_path, 88200, numeric_data)
-
-        #save song to comet interface
-        if os.path.exists(wav_file_path):
-            print(f"File {wav_file_path} exists:", os.path.exists(wav_file_path))
-            print(f"File size: {os.path.getsize(wav_file_path)} bytes")
-
-            experiment.log_audio(wav_file_path, file_name=f"generated_song_{i}.wav", metadata = {"source":"generated"})
-            #time.sleep(120)
-            experiment.flush()
-            #if the above doesnt work try this
-            ##experiment.log_audio(wav_file_path, file_name=wav_file_path, step=i, metadata={"type": "generated_song"})
-
-            print(f"Saved generated song {i} to {wav_file_path}")
-        else:
-            print(f"Failed to save generated song {i} to {wav_file_path}")
-
-experiment.end()
-print("Waiting for Comet uploads to finish...")
-time.sleep(60)
 

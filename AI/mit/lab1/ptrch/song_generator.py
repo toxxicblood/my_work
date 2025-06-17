@@ -191,7 +191,7 @@ def create_experiment():
     #continue an existing experiment or create a new one
     experiment = comet_ml.ExistingExperiment(
         api_key=COMET_API_KEY,
-        previous_experiment  ="",#this is my experiment id
+        previous_experiment  ="4a9d1d67c8be46e6969681c14d791d24",#this is my experiment id
         project_name = "pytorch_music_generator_ RNN"
     )
     # log our hyperparams
@@ -213,8 +213,11 @@ model.to(device)
 #load trained model weights
 """model.load_state_dict(torch.load("music_model.pth", map_location=device))"""
 #load the best trained model weights
-model.load_state_dict(torch.load("best_model.pth", map_location=device))
-model.eval()
+if os.path.exists("best_model.pth"):
+    model.load_state_dict(torch.load("best_model.pth", map_location=device))
+    model.eval()
+else:
+    print("No pre-trained model found. Starting training from scratch.")
 
 #create a new experiment
 
@@ -255,6 +258,7 @@ def generate_text(model, start_string, generation_length= 1000):
 #abc files start with x and this might be a goot start string
 start_string = "X:1\nT:Generated Tune\nM:4/4\nK:C\n"
 generated_text = generate_text(model, start_string=start_string, generation_length=1000)
+experiment.log_text(generated_text, metadata={"description": "Raw generated ABC text"})
 
 #play back generated music
 generated_songs = mdl.lab1.extract_song_snippet(generated_text)
@@ -291,7 +295,6 @@ for i, song in enumerate(generated_songs):
 
 experiment.end()
 print("Waiting for Comet uploads to finish...")
-time.sleep(60)
 
 """# (Optional) Log inference parameters
 experiment.log_parameter("generation_length", 1000)
