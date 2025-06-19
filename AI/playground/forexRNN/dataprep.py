@@ -38,8 +38,6 @@ def create_windows(features, window_size=16):
         window = features.iloc[i:i+window_size].values
         data.append(window)
     return np.array(data)
-
-
 # Example usage
 # features_df = compute_features(your_candlestick_dataframe)
 # windows = create_windows(features_df)
