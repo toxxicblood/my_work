@@ -72,3 +72,22 @@ This helps know the expected inputs and outpusts of the env as all valid acions 
 More importantly, `env.action_space` and `env.observation_space` are both instances of `Space` a high level clas that provides key functions : `space.contains() and space .sample()
 
 Gym has support for a wide range of spaces that users might need.
+
+## Modifying the env
+
+- Wrappers are used to mod an env wihout having to alter the underlying code
+- To wrap an env first initialise base env then pass env along with parameters to the wrapper's constructor
+TimeLimit: Issues a truncated signal if a maximum number of timesteps has been exceeded (or the base environment has issued a truncated signal).
+
+ClipAction: Clips any action passed to step such that it lies in the base environment’s action space.
+
+RescaleAction: Applies an affine transformation to the action to linearly scale for a new low and high bound on the environment.
+
+TimeAwareObservation: Add information about the index of timestep to observation. In some cases helpful to ensure that transitions are Markov.
+
+
+## Training an env
+
+it is not good to call `env.render()` in the training loop because it slows down training by a lot. Tather try to build an extra loop to eval and showcase agent after training
+
+- To train an agent we complete one teration called an episode

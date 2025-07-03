@@ -3,15 +3,29 @@ import torch
 import torch.nn.functional as F
 from A3C import ActorCritic
 from gymnasium import ForexEnv
-from dataprep import open_file, compute_features
+from dataprep import open_file, compute_features, create_windows
 import mitdeeplearning as mdl
 import numpy as np
 import os
+import torch.optim as optim
+import time
+from IPython import display as ipythondisplay
+from tqdm import tqdm
+from google.colab import files
+import pandas as pd
+import datetime
+
 
 # Set your Comet API key
 COMET_API_KEY =  "fux8OQ14wngoM7Cmu6HRqiGQa" # Replace with your key or set as env var
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
+
+
+#loading data
+
+
+
 def train_colab():
     experiment = comet_ml.Experiment(
         api_key=COMET_API_KEY,

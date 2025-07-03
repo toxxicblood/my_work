@@ -1,7 +1,7 @@
 from backtesting import Strategy
+import comet_ml
 import torch
-from A3C import ActorCritic
-from dataprep import compute_features
+from drl import ActorCritic, compute_features
 
 class RLStrategy(Strategy):
     def init(self):

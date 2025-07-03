@@ -101,7 +101,7 @@ embedding_dim = 256
 hidden_size = 1024
 batch_size = 8
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #model = LSTMModel(vocab_size, embedding_dim, hidden_size).to(device)
 
 #print out the model summary

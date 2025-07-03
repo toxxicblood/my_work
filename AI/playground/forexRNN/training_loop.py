@@ -1,16 +1,16 @@
 import torch
 import torch.multiprocessing as mp
-from A3C import ActorCritic
-from gymnasium import ForexEnv
-from dataprep import open_file, compute_features
+from drl import ActorCritic
+from drl import ForexEnv
+from drl import open_file, compute_features
 import pandas as pd
 from torch.multiprocessing import Process, Pipe
 
 
-def worker(rank, global_model, optimizer, df, window_size=16, gamma=0.99):
+def worker(rank, global_model, optimizer, orig_df, features_df, window_size=16, gamma=0.99):
     local_model = ActorCritic(input_dim=5, window_size=window_size, lstm_hidden=128)
     local_model.load_state_dict(global_model.state_dict())
-    env = ForexEnv(df, window_size=window_size)
+    env = ForexEnv(orig_df, features_df, window_size=window_size)
     state = env.reset()
     done = False
     while not done:
@@ -61,13 +61,19 @@ if __name__ == "__main__":
     # Ensure the index is datetime for slicing
     if not isinstance(features_df.index, pd.DatetimeIndex):
         if 'Local time' in df.columns:
-            features_df.index = pd.to_datetime(df['Local time'].iloc[-len(features_df):])
+            # Robustly parse mixed datetime formats
+            parsed_dates = pd.to_datetime(df['Local time'].iloc[-len(features_df):], errors='coerce', dayfirst=True)
+            features_df.index = parsed_dates
+            # Drop rows where datetime parsing failed
+            features_df = features_df[features_df.index.notnull()]
         else:
             raise ValueError("No datetime index or 'Local time' column found for slicing.")
 
-    # Train/test split by date
-    train_df = features_df.loc['2020-01-01':'2024-06-30']
-    test_df = features_df.loc['2024-07-01':'2025-03-21']
+    # Train/test split by date (on original df)
+    train_orig = df.loc['2020-01-01':'2024-06-30']
+    test_orig = df.loc['2024-07-01':'2025-03-21']
+    train_feat = compute_features(train_orig)
+    test_feat = compute_features(test_orig)
 
     # --- Initialize model and optimizer ---
     global_model = ActorCritic(input_dim=5, window_size=16, lstm_hidden=128)
@@ -75,9 +81,9 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(global_model.parameters(), lr=4e-5)
     # --- Start workers ---
     processes = []
-    num_workers = 5  # as in the research
+    num_workers = 5
     for rank in range(num_workers):
-        p = mp.Process(target=worker, args=(rank, global_model, optimizer, train_df))
+        p = mp.Process(target=worker, args=(rank, global_model, optimizer, train_orig, train_feat))
         p.start()
         processes.append(p)
     for p in processes:
