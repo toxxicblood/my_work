@@ -1,2 +1,5 @@
 # Ignore SSL certificates
 certs/
+
+# Ignore node_modules directory
+node_modules/
