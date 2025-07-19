@@ -2,7 +2,8 @@
 
 ## Lecture 3: Deep Computer Vision
 
-This is the ability to know wht is whre by looking
+This is the ability to know what is where by looking
+VIsion is not only about knowing what is where, but being able to understand what is happening in a visual paradigm.
 This helps discover from images what is present in the world, where things are and what actions are taking place to predict and anticipate world events.
 
 __The rise and impact of computer vision:__
