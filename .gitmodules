@@ -1,0 +1,9 @@
+[submodule "AI/AI/cs50"]
+	path = AI/AI/cs50
+	url = git@github.com:code50/105381106.git
+[submodule "AI/cs50"]
+	path = AI/AI/cs50/cs50
+	url = git@github.com:code50/105381106.git
+[submodule "AI/AI/cs50_temp"]
+	path = AI/AI/cs50
+	url = git@github.com:code50/105381106.git

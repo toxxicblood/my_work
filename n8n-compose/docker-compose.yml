@@ -18,6 +18,7 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
       - SSL_KEY=/certs/key.pem
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - SSL_CERT=/certs/cert.pem
 
 volumes:
