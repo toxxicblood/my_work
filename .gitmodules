@@ -7,3 +7,9 @@
 [submodule "AI/AI/cs50_temp"]
 	path = AI/AI/cs50
 	url = git@github.com:code50/105381106.git
+[submodule "busqr"]
+	path = busqr
+	url = git@github.com:toxxicblood/busqr.git
+[submodule "courses/cs50"]
+	path = courses/cs50
+	url = https://github.com/code50/105381106
