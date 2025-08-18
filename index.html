@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gym Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      background: #0f0f0f;
+      overflow: hidden;
+    }
+    .background {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #ff6a00, #0f0f0f 70%);
+      animation: pulse 4s ease-in-out infinite;
+      z-index: -1;
+    }
+    .overlay {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(255, 102, 0, 0.2), rgba(0, 0, 0, 0.8));
+      mix-blend-mode: overlay;
+      z-index: -1;
+    }
+    iframe {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: none;
+      z-index: 1;
+    }
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="background"></div>
+  <div class="overlay"></div>
+  <iframe src="https://lookerstudio.google.com/reporting/5e06b50c-0727-4a8b-8fc6-ee583859bb41"
+          allowfullscreen></iframe>
+</body>
+</html>
