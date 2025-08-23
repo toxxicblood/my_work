@@ -3,5 +3,10 @@ numpy
 gym
 torch
 matplotlib
-stable-baelines3
+stable-baselines3
+comet_ml
+tqdm
+mitdeeplearning
+backtesting
+ipython
 # pip install -r requirements.txt

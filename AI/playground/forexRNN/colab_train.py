@@ -1,9 +1,9 @@
 import comet_ml
 import torch
 import torch.nn.functional as F
-from A3C import ActorCritic
-from gymnasium import ForexEnv
-from dataprep import open_file, compute_features, create_windows
+from model import ActorCritic
+from env import ForexEnv
+from drl import open_file, compute_features, create_windows
 import mitdeeplearning as mdl
 import numpy as np
 import os
@@ -45,7 +45,7 @@ def train_colab():
     train_df = features_df.iloc[:int(0.8*len(features_df))]
 
     # Model and optimizer
-    model = ActorCritic(input_dim=5, window_size=window_size, lstm_hidden=128)
+    model = ActorCritic(input_dim=5, window_size=window_size, lstm_hidden=128, action_history_dim=16*3)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # Plotter
@@ -57,24 +57,32 @@ def train_colab():
         state = env.reset()
         done = False
         episode_loss = []
+        action_history = [2] * window_size
         while not done:
             log_probs, values, rewards = [], [], []
             hx_actor, hx_critic = None, None
             for _ in range(rollout_steps):
                 state_tensor = torch.tensor(state).unsqueeze(0)
-                logits, value, hx_actor, hx_critic = model(state_tensor, hx_actor, hx_critic)
+                action_hist_encoded = np.zeros((len(action_history), 3))
+                for i, act in enumerate(action_history):
+                    action_hist_encoded[i, act] = 1
+                action_hist_tensor = torch.tensor(action_hist_encoded.flatten()).unsqueeze(0).float()
+                logits, value, hx_actor, hx_critic = model(state_tensor, action_hist_tensor, hx_actor, hx_critic)
                 prob = torch.softmax(logits, dim=-1)
                 action = prob.multinomial(num_samples=1).item()
                 log_prob = torch.log(prob.squeeze(0)[action])
-                next_state, reward, done, _ = env.step1(action)
+                next_state, reward, done, _ = env.step(action)
                 log_probs.append(log_prob)
                 values.append(value.squeeze(0))
                 rewards.append(reward)
                 state = next_state
+                action_history.append(action)
+                if len(action_history) > window_size:
+                    action_history.pop(0)
                 if done:
                     break
             # Compute returns and advantage
-            R = 0 if done else model(torch.tensor(state).unsqueeze(0))[1].item()
+            R = 0 if done else model(torch.tensor(state).unsqueeze(0), action_hist_tensor)[1].item()
             returns = []
             for r in reversed(rewards):
                 R = r + gamma * R

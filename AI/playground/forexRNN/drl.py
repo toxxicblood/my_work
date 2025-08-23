@@ -22,17 +22,7 @@ COMET_API_KEY =  "fux8OQ14wngoM7Cmu6HRqiGQa" # Replace with your key or set as e
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-###hyperparameter setting and optimisation
-params = dict(
-    window_size = 16, #experiment between 1 and 64
-    gamma = 0.99,
-    learning_rate = 4e-5,
-    training_iterations = 100 ,# increase for longer training
-    rollout_steps = 20,
-    hidden_size = 1024,#experiment between 1 and 2048
-    input_dim = 5,
 
-)
 
 
 #data preparation functions:
@@ -248,10 +238,7 @@ def compute_loss(labels, logits):
     return loss
 
 
-#checkpoint location
-checkpoint_dir = './training_checkpoints'
-checkpoint_prefix = os.path.join(checkpoint_dir, "my_ckpt")
-os.makedirs(checkpoint_dir, exist_ok=True)
+
 
 def encode_action_history(action_history, num_actions=3):
     # Convert list of action indices into one-hot encoded tensor
@@ -338,7 +325,7 @@ for episode in tqdm(range(params['training_iterations'])):
             if len(action_history) > params['window_size']:
                 action_history.pop(0)
             log_prob = torch.log(prob.squeeze(0)[action])
-            next_state, reward, done, _ = env.step1(action)
+            next_state, reward, done, _ = env.step(action)
             log_probs.append(log_prob)
             values.append(value.squeeze(0))
             rewards.append(reward)

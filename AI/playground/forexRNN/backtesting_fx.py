@@ -1,21 +1,18 @@
-from backtesting import Backtest, Strategy
-import torch
+from backtesting import Backtest
+from rl_strategy import RLStrategy
+import pandas as pd
 
-class RLStrategy(Strategy):
-    def __init__(self):
-        # Initialize indicators or other variables here
-        pass
+def backtest_strategy():
+    # Load your original OHLCV data (not features)
+    df = pd.read_csv('histdata/XAUUSD_Candlestick_1_Hour_ASK_01.01.2020-22.03.2025.csv')
+    df['Local time'] = pd.to_datetime(df['Local time'], format='mixed')
+    df = df.rename(columns={'Local time': 'Date'})
+    df = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
+    df = df.set_index('Date')
 
-    def next(self):
-        # Implement your trading logic here
-        # Example: self.buy() or self.sell()
-        obs = self.data.df[self.i-16:self.i].values
-        logits, _, _ = model(torch.tensor(obs[None], dtype=torch.float32))
-        action = torch.argmax(logits, dim=-1).item()
-        if action == 1: self.buy()
-        elif action == 0: self.sell()
-
-    bt = Backtest(test_df, RLStrategy, cash=10000, commission=.002, exclusive_orders=True)
+    bt = Backtest(df, RLStrategy, cash=10000, commission=0.0)
     stats = bt.run()
-    print(stats)
     bt.plot()
+
+if __name__ == "__main__":
+    backtest_strategy()
