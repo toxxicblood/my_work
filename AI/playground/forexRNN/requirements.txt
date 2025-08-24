@@ -9,4 +9,5 @@ tqdm
 mitdeeplearning
 backtesting
 ipython
+scikit-learn
 # pip install -r requirements.txt
