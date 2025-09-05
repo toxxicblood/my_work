@@ -23,6 +23,8 @@ if __name__ == "__main__":
             data_config = 'ask_bid'
         elif 'multi_timeframe' in model_file:
             data_config = 'multi_timeframe'
+        elif 'sentiment' in model_file:
+            data_config = 'sentiment'
 
         close_col = 'Close'
         if data_config == 'ask':
@@ -81,6 +83,24 @@ if __name__ == "__main__":
             df = hourly_df
             input_dim = 15
             close_col = 'Close_hourly'
+        elif data_config == 'sentiment':
+            df = open_file('histdata/XAUUSD_Candlestick_1_Hour_ASK_01.01.2020-22.03.2025.csv')
+            df['Local time'] = pd.to_datetime(df['Local time'], format='mixed', utc=True)
+            df = df.set_index('Local time')
+            df.sort_index(inplace=True)
+            
+            sentiment_df = open_file('histdata/sentiment.csv')
+            sentiment_df['time_published'] = pd.to_datetime(sentiment_df['time_published'], format='mixed', utc=True)
+            sentiment_df = sentiment_df.set_index('time_published')
+            sentiment_df.sort_index(inplace=True)
+            
+            sentiment_df = sentiment_df['overall_sentiment_score']
+            
+            features_df = compute_features(df)
+            
+            features_df = pd.merge_asof(features_df, sentiment_df, left_index=True, right_index=True, direction='backward')
+            features_df.dropna(inplace=True)
+            input_dim = 6
 
         features_df.dropna(inplace=True)
         scaler = MinMaxScaler()
@@ -92,6 +112,13 @@ if __name__ == "__main__":
 
         test_orig = df.loc['2024-07-01':'2025-03-21']
         test_feat = features_df.loc[test_orig.index]
+        
+        print("Test Orig DF info:")
+        test_orig.info()
+
+        if len(test_orig) < 16:
+            print(f"Skipping {model_file} due to insufficient data for backtesting.")
+            continue
 
         model = ActorCritic(input_dim=input_dim, window_size=16, lstm_hidden=hidden_size, action_history_dim=16*3)
         model.load_state_dict(torch.load(model_file, map_location="cpu"))

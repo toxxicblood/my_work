@@ -66,6 +66,7 @@ class ForexEnv(gym.Env):
         self.position = 0
         self.total_profit = 0
         self.done = False
+        self.returns = []
         return self._get_observation()
 
     def _get_observation(self):
@@ -74,9 +75,19 @@ class ForexEnv(gym.Env):
     def step(self, action):
         if self.idx >= len(self.df):
             return self._get_observation(), 0, True, {}
+        
         price_diff = (self.orig_df[self.close_col].iloc[self.idx] - self.orig_df[self.close_col].iloc[self.idx-1]) / self.orig_df[self.close_col].iloc[self.idx-1]
+        self.returns.append(price_diff)
+        
+        # Sharpe Ratio Reward
+        if len(self.returns) > 1:
+            sharpe_ratio = np.mean(self.returns) / (np.std(self.returns) + 1e-8)
+        else:
+            sharpe_ratio = 0
+            
         transaction_cost = 0.0005
-        reward = {0: -price_diff, 1: price_diff, 2: 0}[action] - transaction_cost * (action != self.position)
+        reward = {0: -sharpe_ratio, 1: sharpe_ratio, 2: 0}[action] - transaction_cost * (action != self.position)
+        
         self.position = action
         self.idx += 1
         done = self.idx >= len(self.df)
@@ -167,7 +178,7 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_size', type=int, default=128, help='lstm hidden size')
     parser.add_argument('--num_workers', type=int, default=2, help='number of training workers')
     parser.add_argument('--model_name', type=str, default='a3c_model.pth', help='name for the saved model')
-    parser.add_argument('--data_config', type=str, default='ask', choices=['ask', 'ask_bid', 'multi_timeframe'], help='data configuration')
+    parser.add_argument('--data_config', type=str, default='ask', choices=['ask', 'ask_bid', 'multi_timeframe', 'sentiment'], help='data configuration')
     args = parser.parse_args()
 
     mp.set_start_method('spawn')
@@ -229,6 +240,24 @@ if __name__ == "__main__":
         df = hourly_df # Use hourly for original prices
         input_dim = 15
         close_col = 'Close_hourly'
+    elif args.data_config == 'sentiment':
+        df = open_file('histdata/XAUUSD_Candlestick_1_Hour_ASK_01.01.2020-22.03.2025.csv')
+        df['Local time'] = pd.to_datetime(df['Local time'], format='mixed', utc=True)
+        df = df.set_index('Local time')
+        df.sort_index(inplace=True)
+        
+        sentiment_df = open_file('histdata/sentiment.csv')
+        sentiment_df['time_published'] = pd.to_datetime(sentiment_df['time_published'], format='mixed', utc=True)
+        sentiment_df = sentiment_df.set_index('time_published')
+        sentiment_df.sort_index(inplace=True)
+        
+        sentiment_df = sentiment_df['overall_sentiment_score']
+        
+        features_df = compute_features(df)
+        
+        features_df = pd.merge_asof(features_df, sentiment_df, left_index=True, right_index=True, direction='backward')
+        features_df.dropna(inplace=True)
+        input_dim = 6
 
     features_df.dropna(inplace=True)
     scaler = MinMaxScaler()

@@ -1,7 +1,7 @@
 
 services:
   n8n:
-    image: n8nio/n8n
+    image: docker.n8n.io/n8nio/n8n:latest
     restart: always
     ports:
       - "5678:5678"
@@ -20,6 +20,8 @@ services:
       - SSL_KEY=/certs/key.pem
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - SSL_CERT=/certs/cert.pem
+      - TZ=${GENERIC_TIMEZONE}
+      - N8N_RUNNERS_ENABLED=true
 
 volumes:
   n8n_data:
