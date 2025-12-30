@@ -1,0 +1,1423 @@
+{
+  "name": "FX agent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        1440
+      ],
+      "id": "b85055e4-a55a-4ff1-95c0-fad925c2781a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "from datetime import datetime, timedelta\n\n# Get current time and today's date\nnow = datetime.now()\ntoday = now.date()\n\n# Store weekdays in reverse (we'll reverse later to keep chronological order)\ncollected_days = []\n\n# Collect the past 5 weekdays\noffset = 1\nwhile len(collected_days) < 5:\n    target_date = today - timedelta(days=offset)\n    if target_date.weekday() < 5:  # Monday to Friday\n        collected_days.append(target_date)\n    offset += 1\n\n# Reverse to chronological order\ncollected_days.reverse()\n\n# Build results with labels as day_1, day_2, ..., day_5\nresults = []\nfor i, date_obj in enumerate(collected_days, start=1):\n    startDateTime = date_obj.strftime(\"%Y-%m-%d\") + \" 00:00:00\"\n    endDateTime = date_obj.strftime(\"%Y-%m-%d\") + \" 23:59:59\"\n    readable = f\"{date_obj.day}/{date_obj.month}/{str(date_obj.year)[-2:]}\"\n    \n    results.append({\n        \"json\": {\n            \"label\": f\"day_{i}\",\n            \"date\": readable,\n            f\"day_{i}\": startDateTime,\n            \"endDateTime\": endDateTime\n        }\n    })\n\n# Add today's data if it's a weekday\nif today.weekday() < 5:\n    start_today = today.strftime(\"%Y-%m-%d\") + \" 00:00:00\"\n    end_now = now.strftime(\"%Y-%m-%d %H:%M:%S\")\n    readable_today = f\"{today.day}/{today.month}/{str(today.year)[-2:]}\"\n\n    # London and US market open times in Africa/Nairobi timezone\n    ldn_open = today.strftime(\"%Y-%m-%d\") + \" 10:00:00\"\n    us_open = today.strftime(\"%Y-%m-%d\") + \" 16:30:00\"\n      # m15 time (5 hours before now)\n    m15_time = (now - timedelta(hours=5)).strftime(\"%Y-%m-%d %H:%M:%S\")\n\n    results.append({\n        \"json\": {\n            \"label\": \"today\",\n            \"date\": readable_today,\n            \"startDateTime\": start_today,\n            \"todayDateTime\": end_now,\n            \"Ldn open\": ldn_open,\n            \"US open\": us_open,\n            \"m15\": m15_time\n        }\n    })\n\n# Return final output\nreturn results\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1440
+      ],
+      "id": "646c1056-b9d4-4475-93f6-a7e04857a77e",
+      "name": "date finder"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.twelvedata.com/time_series\n?apikey=239220599e224f5ba72ba131bb6c86d2\n&interval=1day\n&symbol=XAU/USD\n&country=United States\n&exchange=NYSE\n&timezone=Africa/Nairobi\n&format=JSON\n&start_date={{ $json.day_1 }}\n&end_date={{ $json.todayDateTime }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        112
+      ],
+      "id": "3bbd9dbe-ea69-4b98-8980-7e30221a61bd",
+      "name": "Daily",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://api.twelvedata.com/time_series\n?apikey=239220599e224f5ba72ba131bb6c86d2\n&interval=1h\n&symbol=XAU/USD\n&country=United States\n&exchange=NYSE\n&timezone=Africa/Nairobi\n&format=JSON\n&start_date={{ $json[\"Ldn open\"] }}\n&end_date={{ $json.todayDateTime }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        912
+      ],
+      "id": "c658ab1f-b2db-4356-9487-80cd88423b3f",
+      "name": "Hourly",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://api.twelvedata.com/time_series\n?apikey=239220599e224f5ba72ba131bb6c86d2\n&interval=4h\n&symbol=XAU/USD\n&country=United States\n&exchange=NYSE\n&timezone=Africa/Nairobi\n&format=JSON\n&start_date={{ $json.day_3 }}\n&end_date={{ $json.todayDateTime }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        512
+      ],
+      "id": "af8007c9-da33-4ea5-a345-aa8a49bf57dd",
+      "name": "4 Hour",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://api.twelvedata.com/time_series\n?apikey=239220599e224f5ba72ba131bb6c86d2\n&interval=15min\n&symbol=XAU/USD\n&country=United States\n&exchange=NYSE\n&timezone=Africa/Nairobi\n&format=JSON\n&start_date={{ $json.m15 }}\n&end_date={{ $json.todayDateTime }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        1312
+      ],
+      "id": "91bfb204-1bfc-4f2e-bf81-feda0d21a21b",
+      "name": "15 Minute",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        912,
+        224
+      ],
+      "id": "eb58b9fd-0f2b-488f-87d8-75c0ec6ba13c",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"Symbol\": {\n      \"type\": \"string\",\n      \"description\": \"Currency pair symbol (e.g., XAU/USD)\"\n    },\n    \"Interval\": {\n      \"type\": \"string\",\n      \"description\": \"Time interval of the data (e.g., 1day)\"\n    },\n    \"Analysis\": {\n      \"type\": \"string\",\n      \"description\": \"Concise summary of key observations from the data analysis\"\n    },\n    \"PricePrediction\": {\n      \"type\": \"string\",\n      \"description\": \"Prediction for the next trading period, including price range\"\n    },\n    \"EntryAdvice\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"EntryPoint\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended entry price\"\n        },\n        \"StopLoss\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended stop-loss price\"\n        },\n        \"TargetProfit\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended target profit price\"\n        },\n        \"Strategy\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended trading strategy\"\n        }\n      },\n      \"required\": [\"EntryPoint\", \"StopLoss\", \"TargetProfit\", \"Strategy\"]\n    }\n  },\n  \"required\": [\"Symbol\", \"Interval\", \"Analysis\", \"PricePrediction\", \"EntryAdvice\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1024,
+        224
+      ],
+      "id": "d363815d-dc7b-4d41-b3f5-26e403286917",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        912,
+        624
+      ],
+      "id": "6d3f5040-837f-4dde-9939-f6b482cb0493",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"Symbol\": {\n      \"type\": \"string\",\n      \"description\": \"Currency pair symbol (e.g., XAU/USD)\"\n    },\n    \"Interval\": {\n      \"type\": \"string\",\n      \"description\": \"Time interval of the data (e.g., 1day)\"\n    },\n    \"Analysis\": {\n      \"type\": \"string\",\n      \"description\": \"Concise summary of key observations from the data analysis\"\n    },\n    \"PricePrediction\": {\n      \"type\": \"string\",\n      \"description\": \"Prediction for the next trading period, including price range\"\n    },\n    \"EntryAdvice\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"EntryPoint\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended entry price\"\n        },\n        \"StopLoss\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended stop-loss price\"\n        },\n        \"TargetProfit\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended target profit price\"\n        },\n        \"Strategy\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended trading strategy\"\n        }\n      },\n      \"required\": [\"EntryPoint\", \"StopLoss\", \"TargetProfit\", \"Strategy\"]\n    }\n  },\n  \"required\": [\"Symbol\", \"Interval\", \"Analysis\", \"PricePrediction\", \"EntryAdvice\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1024,
+        624
+      ],
+      "id": "56bf393b-884c-46ff-bebe-b2b201d98d06",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        912,
+        1024
+      ],
+      "id": "f7009011-0612-486c-8eec-99a05968dfb3",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"Symbol\": {\n      \"type\": \"string\",\n      \"description\": \"Currency pair symbol (e.g., XAU/USD)\"\n    },\n    \"Interval\": {\n      \"type\": \"string\",\n      \"description\": \"Time interval of the data (e.g., 1day)\"\n    },\n    \"Analysis\": {\n      \"type\": \"string\",\n      \"description\": \"Concise summary of key observations from the data analysis\"\n    },\n    \"PricePrediction\": {\n      \"type\": \"string\",\n      \"description\": \"Prediction for the next trading period, including price range\"\n    },\n    \"EntryAdvice\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"EntryPoint\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended entry price\"\n        },\n        \"StopLoss\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended stop-loss price\"\n        },\n        \"TargetProfit\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended target profit price\"\n        },\n        \"Strategy\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended trading strategy\"\n        }\n      },\n      \"required\": [\"EntryPoint\", \"StopLoss\", \"TargetProfit\", \"Strategy\"]\n    }\n  },\n  \"required\": [\"Symbol\", \"Interval\", \"Analysis\", \"PricePrediction\", \"EntryAdvice\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1024,
+        1024
+      ],
+      "id": "107004be-e654-4eef-b176-34bb41f71c5c",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        912,
+        1424
+      ],
+      "id": "14374dba-b813-45d3-97eb-1c93e91c389c",
+      "name": "Google Gemini Chat Model3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"Symbol\": {\n      \"type\": \"string\",\n      \"description\": \"Currency pair symbol (e.g., XAU/USD)\"\n    },\n    \"Interval\": {\n      \"type\": \"string\",\n      \"description\": \"Time interval of the data (e.g., 1day)\"\n    },\n    \"Analysis\": {\n      \"type\": \"string\",\n      \"description\": \"Concise summary of key observations from the data analysis\"\n    },\n    \"PricePrediction\": {\n      \"type\": \"string\",\n      \"description\": \"Prediction for the next trading period, including price range\"\n    },\n    \"EntryAdvice\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"EntryPoint\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended entry price\"\n        },\n        \"StopLoss\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended stop-loss price\"\n        },\n        \"TargetProfit\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended target profit price\"\n        },\n        \"Strategy\": {\n          \"type\": \"string\",\n          \"description\": \"Recommended trading strategy\"\n        }\n      },\n      \"required\": [\"EntryPoint\", \"StopLoss\", \"TargetProfit\", \"Strategy\"]\n    }\n  },\n  \"required\": [\"Symbol\", \"Interval\", \"Analysis\", \"PricePrediction\", \"EntryAdvice\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1024,
+        1424
+      ],
+      "id": "fbf3b46a-3fc3-433d-b6ca-83cc84457fa5",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.values }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a financial analyst specializing in forex trading. Your task is to analyze the provided forex data and generate an analysis with price prediction and entry advice.\n\nYou will be provided with forex data in the following JSON format:\n{\n  \"symbol\": \"EUR/USD\",\n  \"interval\": \"1day\",\n  \"data\": [\n    { \"timestamp\": \"2024-05-13\", \"open\": 1.0773, \"high\": 1.0790, \"low\": 1.0765, \"close\": 1.0788 },\n    { \"timestamp\": \"2024-05-14\", \"open\": 1.0788, \"high\": 1.0825, \"low\": 1.0786, \"close\": 1.0818 },\n    { \"timestamp\": \"2024-05-15\", \"open\": 1.0818, \"high\": 1.0886, \"low\": 1.0811, \"close\": 1.0883 },\n    { \"timestamp\": \"2024-05-16\", \"open\": 1.0883, \"high\": 1.0895, \"low\": 1.0865, \"close\": 1.0868 },\n    { \"timestamp\": \"2024-05-17\", \"open\": 1.0868, \"high\": 1.0872, \"low\": 1.0833, \"close\": 1.0842 }\n  ]\n}\n\nFollow these steps to generate the analysis:\n\nAnalyze the Data:\nAssume the symbol is XAU/USD.\nExamine the historical price data (open, high, low, close) over the given period.\nIdentify trends, patterns, and key support and resistance levels.\nConsider the volatility and any significant price movements.\nGenerate Price Prediction:\n\nBased on your analysis, predict the potential future price movement (upward, downward, or sideways).\nProvide a price range for the next trading period (e.g., next day or week).\nExplain the reasoning behind your prediction, referencing specific data points and patterns.\nProvide Entry Advice:\n\nRecommend potential entry points for buying or selling based on your price prediction.\nSuggest stop-loss levels to limit potential losses.\nAdvise on target profit levels based on the predicted price movement.\nConsider different trading strategies (e.g., trend following, breakout, reversal) and recommend the most suitable one.\nOutput Format:\n\nSymbol: [Currency pair symbol (e.g., XAU/USD)]\nInterval: [Time interval of the data (e.g., 1day)]\nAnalysis: [A concise summary of the key observations from the data analysis]\nPrice Prediction: [Your prediction for the next trading period, including a price range]\nEntry Advice:\nEntry Point: [Recommended entry price]\nStop-Loss: [Recommended stop-loss price]\nTarget Profit: [Recommended target profit price]\nStrategy: [Recommended trading strategy]\nImportant Considerations:\n\nYour analysis and advice should be based solely on the provided data.\nClearly state any assumptions or limitations in your analysis.\nUse a professional and objective tone.\nRemember that forex trading involves risk, and your analysis is not a guarantee of profit."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "d9d577ec-fb5f-4393-afa3-484064832517",
+      "name": "Daily analysis agent",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.values }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a financial analyst specializing in forex trading. Your task is to analyze the provided forex data and generate an analysis with price prediction and entry advice.\n\nYou will be provided with forex data in the following JSON format:\n{\n  \"symbol\": \"EUR/USD\",\n  \"interval\": \"1day\",\n  \"data\": [\n    { \"timestamp\": \"2024-05-13\", \"open\": 1.0773, \"high\": 1.0790, \"low\": 1.0765, \"close\": 1.0788 },\n    { \"timestamp\": \"2024-05-14\", \"open\": 1.0788, \"high\": 1.0825, \"low\": 1.0786, \"close\": 1.0818 },\n    { \"timestamp\": \"2024-05-15\", \"open\": 1.0818, \"high\": 1.0886, \"low\": 1.0811, \"close\": 1.0883 },\n    { \"timestamp\": \"2024-05-16\", \"open\": 1.0883, \"high\": 1.0895, \"low\": 1.0865, \"close\": 1.0868 },\n    { \"timestamp\": \"2024-05-17\", \"open\": 1.0868, \"high\": 1.0872, \"low\": 1.0833, \"close\": 1.0842 }\n  ]\n}\n\nFollow these steps to generate the analysis:\n\nAnalyze the Data:\nAssume the symbol is XAU/USD.\nExamine the historical price data (open, high, low, close) over the given period.\nIdentify trends, patterns, and key support and resistance levels.\nConsider the volatility and any significant price movements.\nGenerate Price Prediction:\n\nBased on your analysis, predict the potential future price movement (upward, downward, or sideways).\nProvide a price range for the next trading period (e.g., next day or week).\nExplain the reasoning behind your prediction, referencing specific data points and patterns.\nProvide Entry Advice:\n\nRecommend potential entry points for buying or selling based on your price prediction.\nSuggest stop-loss levels to limit potential losses.\nAdvise on target profit levels based on the predicted price movement.\nConsider different trading strategies (e.g., trend following, breakout, reversal) and recommend the most suitable one.\nOutput Format:\n\nSymbol: [Currency pair symbol (e.g., XAU/USD)]\nInterval: [Time interval of the data (e.g., 1day)]\nAnalysis: [A concise summary of the key observations from the data analysis]\nPrice Prediction: [Your prediction for the next trading period, including a price range]\nEntry Advice:\nEntry Point: [Recommended entry price]\nStop-Loss: [Recommended stop-loss price]\nTarget Profit: [Recommended target profit price]\nStrategy: [Recommended trading strategy]\nImportant Considerations:\n\nYour analysis and advice should be based solely on the provided data.\nClearly state any assumptions or limitations in your analysis.\nUse a professional and objective tone.\nRemember that forex trading involves risk, and your analysis is not a guarantee of profit."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        880,
+        400
+      ],
+      "id": "91ac4d20-2ab8-4c0e-b667-2baa136ad57f",
+      "name": "4Hour analysis agent",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.values }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a financial analyst specializing in forex trading. Your task is to analyze the provided forex data and generate an analysis with price prediction and entry advice.\n\nYou will be provided with forex data in the following JSON format:\n{\n  \"symbol\": \"EUR/USD\",\n  \"interval\": \"1day\",\n  \"data\": [\n    { \"timestamp\": \"2024-05-13\", \"open\": 1.0773, \"high\": 1.0790, \"low\": 1.0765, \"close\": 1.0788 },\n    { \"timestamp\": \"2024-05-14\", \"open\": 1.0788, \"high\": 1.0825, \"low\": 1.0786, \"close\": 1.0818 },\n    { \"timestamp\": \"2024-05-15\", \"open\": 1.0818, \"high\": 1.0886, \"low\": 1.0811, \"close\": 1.0883 },\n    { \"timestamp\": \"2024-05-16\", \"open\": 1.0883, \"high\": 1.0895, \"low\": 1.0865, \"close\": 1.0868 },\n    { \"timestamp\": \"2024-05-17\", \"open\": 1.0868, \"high\": 1.0872, \"low\": 1.0833, \"close\": 1.0842 }\n  ]\n}\n\nFollow these steps to generate the analysis:\n\nAnalyze the Data:\nAssume the symbol is XAU/USD.\nExamine the historical price data (open, high, low, close) over the given period.\nIdentify trends, patterns, and key support and resistance levels.\nConsider the volatility and any significant price movements.\nGenerate Price Prediction:\n\nBased on your analysis, predict the potential future price movement (upward, downward, or sideways).\nProvide a price range for the next trading period (e.g., next day or week).\nExplain the reasoning behind your prediction, referencing specific data points and patterns.\nProvide Entry Advice:\n\nRecommend potential entry points for buying or selling based on your price prediction.\nSuggest stop-loss levels to limit potential losses.\nAdvise on target profit levels based on the predicted price movement.\nConsider different trading strategies (e.g., trend following, breakout, reversal) and recommend the most suitable one.\nOutput Format:\n\nSymbol: [Currency pair symbol (e.g., XAU/USD)]\nInterval: [Time interval of the data (e.g., 1day)]\nAnalysis: [A concise summary of the key observations from the data analysis]\nPrice Prediction: [Your prediction for the next trading period, including a price range]\nEntry Advice:\nEntry Point: [Recommended entry price]\nStop-Loss: [Recommended stop-loss price]\nTarget Profit: [Recommended target profit price]\nStrategy: [Recommended trading strategy]\nImportant Considerations:\n\nYour analysis and advice should be based solely on the provided data.\nClearly state any assumptions or limitations in your analysis.\nUse a professional and objective tone.\nRemember that forex trading involves risk, and your analysis is not a guarantee of profit."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        880,
+        800
+      ],
+      "id": "6471d46a-96f8-41e8-8655-ea4856b282cb",
+      "name": "1Hour analysis agent",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.values }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a financial analyst specializing in forex trading. Your task is to analyze the provided forex data and generate an analysis with price prediction and entry advice.\n\nYou will be provided with forex data in the following JSON format:\n{\n  \"symbol\": \"EUR/USD\",\n  \"interval\": \"1day\",\n  \"data\": [\n    { \"timestamp\": \"2024-05-13\", \"open\": 1.0773, \"high\": 1.0790, \"low\": 1.0765, \"close\": 1.0788 },\n    { \"timestamp\": \"2024-05-14\", \"open\": 1.0788, \"high\": 1.0825, \"low\": 1.0786, \"close\": 1.0818 },\n    { \"timestamp\": \"2024-05-15\", \"open\": 1.0818, \"high\": 1.0886, \"low\": 1.0811, \"close\": 1.0883 },\n    { \"timestamp\": \"2024-05-16\", \"open\": 1.0883, \"high\": 1.0895, \"low\": 1.0865, \"close\": 1.0868 },\n    { \"timestamp\": \"2024-05-17\", \"open\": 1.0868, \"high\": 1.0872, \"low\": 1.0833, \"close\": 1.0842 }\n  ]\n}\n\nFollow these steps to generate the analysis:\n\nAnalyze the Data:\nAssume the symbol is XAU/USD.\nExamine the historical price data (open, high, low, close) over the given period.\nIdentify trends, patterns, and key support and resistance levels.\nConsider the volatility and any significant price movements.\nGenerate Price Prediction:\n\nBased on your analysis, predict the potential future price movement (upward, downward, or sideways).\nProvide a price range for the next trading period (e.g., next day or week).\nExplain the reasoning behind your prediction, referencing specific data points and patterns.\nProvide Entry Advice:\n\nRecommend potential entry points for buying or selling based on your price prediction.\nSuggest stop-loss levels to limit potential losses.\nAdvise on target profit levels based on the predicted price movement.\nConsider different trading strategies (e.g., trend following, breakout, reversal) and recommend the most suitable one.\nOutput Format:\n\nSymbol: [Currency pair symbol (e.g., XAU/USD)]\nInterval: [Time interval of the data (e.g., 1day)]\nAnalysis: [A concise summary of the key observations from the data analysis]\nPrice Prediction: [Your prediction for the next trading period, including a price range]\nEntry Advice:\nEntry Point: [Recommended entry price]\nStop-Loss: [Recommended stop-loss price]\nTarget Profit: [Recommended target profit price]\nStrategy: [Recommended trading strategy]\nImportant Considerations:\n\nYour analysis and advice should be based solely on the provided data.\nClearly state any assumptions or limitations in your analysis.\nUse a professional and objective tone.\nRemember that forex trading involves risk, and your analysis is not a guarantee of profit."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1200
+      ],
+      "id": "c9ba15f5-538b-4386-82bd-ab43339b078d",
+      "name": "m15 analysis agent",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 6
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1248,
+        1040
+      ],
+      "id": "6a121d9c-516e-429b-a3a6-c736fcffb9b4",
+      "name": "Merge",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following trading data and provide a general full analysis with trading instructions for each entry. Ensure your analysis covers the key points provided in the data, including the overall trend, price predictions, and specific entry advice.\nHere is the trading data: {{ JSON.stringify($json.result, null, 2) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a highly skilled Forex market analyst and trading strategist with deep experience in short-term trading and risk management. Your role is to interpret technical data across multiple timeframes (1D, 4H, 1H, 15M) and recommend the **best trading strategy specifically for the 15-minute timeframe (M15)**.\n\nYou will be given structured analysis data for each timeframe, including:\n- Symbol and Interval\n- Trend Summary (Analysis)\n- Price Prediction\n- Entry Advice (Entry point, Stop-loss, Target profit, Strategy)\n\nYour tasks:\n1. Prioritize the 15-minute (M15) timeframe and use higher timeframes (1H, 4H, 1D) to confirm, reject, or refine the signal.\n2. Recommend **one high-confidence trade setup** on M15 that:\n   - Aligns with the overall trend or a confirmed retracement.\n   - Has a **maximized risk-reward ratio** (at least 2:1 preferred).\n   - Includes exact values for: entry, stop-loss, target profit.\n   - Has a rationale supported by at least one higher timeframe.\n3. Avoid trades with conflicting trends across timeframes unless you justify a countertrend scalp with strong risk management.\n\nFormat your response as:\n\n### 📈 M15 Strategy Recommendation\n\n- **Trend Context:** [Summary of trend and confirmation from higher timeframes]\n- **Trade Setup:**\n  - **Type:** [Short or Long]\n  - **Entry Point:** [Precise value]\n  - **Stop Loss:** [Precise value]\n  - **Target Profit:** [Precise value]\n  - **RRR:** [e.g. 3.2:1]\n- **Strategy Name:** [e.g. Pullback Entry, Breakout Fade]\n- **Justification:** [Why this trade is high probability and aligned with MTF analysis]\n\nOnly recommend trades that meet high standards of alignment and RRR. If no trade qualifies, say so clearly and explain why.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        1104
+      ],
+      "id": "763c297a-a7c4-4b91-9490-6f95f0ced829",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// `items` contains all outputs from the previous node\nconst result = {};\n\n// Loop through each incoming item\nfor (const item of items) {\n  const output = item.json.output;\n\n  if (output && output.Interval) {\n    result[output.Interval] = output;\n  }\n}\n\n// Return a single merged object as output\nreturn [\n  {\n    \"result\": result\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        1104
+      ],
+      "id": "044e5ba2-4c7b-4cf2-9711-45058413d072",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        1328
+      ],
+      "id": "ac5cd77d-4f3a-49cb-bc72-d4d24d593fec",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"strategy_recommendation\": {\n    \"timeframe\": \"M15\",\n    \"trend_context\": \"[Summary of trend and confirmation from higher timeframes]\",\n    \"trade_setup\": {\n      \"type\": \"[Short or Long]\",\n      \"entry_point\": \"[Precise value]\",\n      \"stop_loss\": \"[Precise value]\",\n      \"target_profit\": \"[Precise value]\",\n      \"rrr\": \"[e.g. 3.2:1]\"\n    },\n    \"strategy_name\": \"[e.g. Pullback Entry, Breakout Fade]\",\n    \"justification\": \"[Why this trade is high probability and aligned with MTF analysis]\",\n    \"status\": \"valid\", \n    \"notes\": \"Only recommend trades that are aligned across timeframes with a minimum RRR of 2:1. If no qualifying trade exists, set 'status' to 'none' and provide reason in 'justification'.\"\n  }\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        1328
+      ],
+      "id": "6ab17569-c561-4908-a8e1-b13b019ed1a4",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "url": "https://api.twelvedata.com/price?symbol=XAU/USD&apikey=239220599e224f5ba72ba131bb6c86d2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        2160
+      ],
+      "id": "43ac2f9e-2ef3-4fdd-9ead-bbf28a224193",
+      "name": "current price",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.twelvedata.com/quote?symbol=XAU/USD&apikey=239220599e224f5ba72ba131bb6c86d2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        2000
+      ],
+      "id": "0d1a17c0-8dd1-4e5c-9bfa-6307b4e7aa3e",
+      "name": "price quote",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.twelvedata.com/dema?symbol=XAU/USD&interval=15min&apikey=239220599e224f5ba72ba131bb6c86d2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        2352
+      ],
+      "id": "618d95d6-4e02-4d21-9c1a-e99f7ed7cdbb",
+      "name": "Entry point identifier",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "https://finnhub.io/api/v1/news?category=financial&token=d25p9dpr01qhge4dnkd0d25p9dpr01qhge4dnkdg",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        1712
+      ],
+      "id": "b8bbea9e-77a5-4051-b476-9e94367f25cb",
+      "name": "analyst ratings",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        960,
+        1824
+      ],
+      "id": "55361e56-d0e0-4ec4-a051-8c904b95ac93",
+      "name": "Google Gemini Chat Model5",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define gold-related and macroeconomic keywords\nconst goldKeywords = [\"gold\", \"xau\", \"precious metal\", \"commodities\", \"safe haven\"];\nconst macroKeywords = [\"usd\", \"inflation\", \"interest rate\", \"fed\", \"cpi\", \"fomc\", \"jobs\", \"yield\", \"recession\", \"risk sentiment\"];\n\n// Helper to convert Unix timestamp to ISO\nconst unixToISO = unix => new Date(unix * 1000).toISOString();\n\n// Prepare the combined array\nconst relevantNews = [];\n\nfor (const item of items) {\n  const news = item.json;\n  const text = `${news.headline || \"\"} ${news.summary || \"\"}`.toLowerCase();\n\n  const isGoldRelated = goldKeywords.some(k => text.includes(k));\n  const isMacroRelated = macroKeywords.some(k => text.includes(k));\n\n  if (isGoldRelated || isMacroRelated) {\n    relevantNews.push({\n      headline: news.headline,\n      summary: news.summary,\n      source: news.source,\n      timestamp: unixToISO(news.datetime),\n      url: news.url,\n      impact: isGoldRelated\n        ? \"Gold-specific\"\n        : \"Macro influence\"\n    });\n  }\n}\n\n// Return a single item with all news under one key\nreturn [\n  {\n    json: {\n      label: \"XAU/USD relevant news\",\n      articles: relevantNews\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        1712
+      ],
+      "id": "b326ab95-723b-4aee-ad26-6b957c76a9f6",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.articles }}",
+        "options": {
+          "systemMessage": "You are a highly focused financial news analysis agent. Your task is to evaluate each news headline and summary to determine whether it is relevant to the price movement of XAU/USD (Gold vs US Dollar).\n\nOnly retain news that:\n\nMentions gold, precious metals, commodities, or inflation directly\n\nInvolves major macroeconomic indicators (e.g. CPI, jobs data, interest rates, Fed policy, USD performance)\n\nComes from central banks (like the Fed), or credible institutions issuing outlooks on economic stability\n\nReflects risk sentiment changes (e.g., war, recession fears, stock market crashes) that could shift capital to or from safe-haven assets like gold\n\nIf a news article does not impact the gold market or currency strength (e.g., TikTok scams, tech stock updates), it is irrelevant and should be excluded.\n\nFor each relevant article, extract and return a json object with:\n\n{\n\"headline\": \"...\",\n\"summary\": \"...\",\n\"impact_on_gold\": \"[Brief reasoning on how this news may affect XAU/USD (e.g. bullish, bearish, or neutral)]\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1600
+      ],
+      "id": "9bf05642-22f4-4b5b-a23e-10184b0bf794",
+      "name": "news agent",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2048,
+        2160
+      ],
+      "id": "09d03142-78cf-4bc9-8802-b427b8638834",
+      "name": "Merge1",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = {\n  analysis: {},\n  indicators: {},\n  strategy: {},\n  news: {},\n};\n\n// Helper to detect interval tags\nfunction normalizeInterval(input) {\n  const lower = input.toLowerCase();\n  if (lower.includes(\"1day\") || lower === \"1d\" || lower === \"daily\") return \"daily\";\n  if (lower.includes(\"4h\") || lower === \"4hour\") return \"4hour\";\n  if (lower.includes(\"1h\") || lower === \"1hour\") return \"1hour\";\n  if (lower.includes(\"15m\") || lower === \"m15\" || lower.includes(\"15min\")) return \"m15\";\n  return lower;\n}\n\n// Process incoming items\nfor (const item of items) {\n  const json = item.json;\n\n  // Strategy recommendation\n  if (json.output?.strategy_recommendation) {\n    result.strategy = json.output.strategy_recommendation;\n  }\n\n  // Daily/4H/1H Analysis Agent\n  if (json.output?.Interval) {\n    const key = normalizeInterval(json.output.Interval);\n    result.analysis[key] = json.output;\n  }\n\n  // Indicators like DEMA\n  if (json.meta?.interval && json.values) {\n    const key = normalizeInterval(json.meta.interval);\n    result.indicators[key] = {\n      meta: json.meta,\n      values: json.values,\n    };\n  }\n\n  // News Articles\n  if (json.articles && Array.isArray(json.articles)) {\n    result.news = json;\n  }\n\n  // Add any future categories here if needed (e.g., quote, analyst_rating, etc.)\n}\n\n// Return one item\nreturn [\n  {\n    \"result\": result\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        1952
+      ],
+      "id": "2be1c62d-0c31-46de-9a7e-9d4220ffb4d5",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.result }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a professional trading assistant specializing in gold (XAU/USD) short-term strategies. Given the full context of multi-timeframe analysis, indicators (like DEMA), and a structured trade setup, your job is to:\n\n1. Identify if a trading opportunity exists.\n2. Provide **precise, executable instructions** a trader can follow immediately.\n3. Output the result in the format below.\n\n### Output Format (JSON):\n{\n  \"symbol\": \"XAU/USD\",\n  \"action\": \"SELL\",  // or \"BUY\", or \"NO TRADE\"\n  \"entry_price\": 3303.00,\n  \"stop_loss\": 3308.50,\n  \"take_profit\": 3290.00,\n  \"position_size\": \"Determine based on 1% risk rule\", \n  \"confidence\": \"High\",  // or \"Medium\", \"Low\"\n  \"reason\": \"All higher timeframes confirm a bearish trend. A short is recommended at resistance with good RRR (2.36:1).\",\n  \"strategy\": \"Pullback entry in confirmed downtrend\",\n  \"timeframe\": \"M15\",\n  \"trade_validity\": \"Valid until price closes above 3308.50\",\n  \"notes\": \"Only enter after a retracement to 3303.00. If price moves above 3308.50 before entry, cancel trade.\"\n}\n\n### Instructions:\n- Never suggest a trade unless trend, setup, and risk conditions are clearly aligned.\n- Ensure all price levels are quoted as floats with two decimal points.\n- Assume the trader is using a platform that supports market and limit orders.\n- Do not repeat analysis paragraphs. Just extract what’s essential for decision-making.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        1856
+      ],
+      "id": "3614c6e9-5319-46ec-9dbd-81f2ffab3f46",
+      "name": "AI Agent1",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2512,
+        2080
+      ],
+      "id": "53b6bb44-a686-433f-9c41-301b7a5c6dfe",
+      "name": "Google Gemini Chat Model6",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"symbol\": \"XAU/USD\",\n  \"action\": \"SELL\",\n  \"entry_price\": 3303.00,\n  \"stop_loss\": 3308.50,\n  \"take_profit\": 3290.00,\n  \"position_size\": \"Determine based on 1% risk rule\",\n  \"confidence\": \"High\",\n  \"reason\": \"All higher timeframes confirm a bearish trend. A short is recommended at resistance with good RRR (2.36:1).\",\n  \"strategy\": \"Pullback entry in confirmed downtrend\",\n  \"timeframe\": \"M15\",\n  \"trade_validity\": \"Valid until price closes above 3308.50\",\n  \"notes\": \"Only enter after a retracement to 3303.00. If price moves above 3308.50 before entry, cancel trade.\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        2080
+      ],
+      "id": "c2200330-6f66-4962-ba72-ad884dc8cdaa",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ",
+          "mode": "list",
+          "cachedResultName": "Trade Agent",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "date_time"
+          ],
+          "schema": [
+            {
+              "id": "symbol",
+              "displayName": "symbol",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date_time",
+              "displayName": "date_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "entry",
+              "displayName": "entry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "stop_loss",
+              "displayName": "stop_loss",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "take_profit",
+              "displayName": "take_profit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "position_size",
+              "displayName": "position_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timeframe",
+              "displayName": "timeframe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "trade_status",
+              "displayName": "trade_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "trade_end",
+              "displayName": "trade_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "acct_balance",
+              "displayName": "acct_balance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Leverage",
+              "displayName": "Leverage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "profit_loss",
+              "displayName": "profit_loss",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ammt_risked",
+              "displayName": "ammt_risked",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "rr",
+              "displayName": "rr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "output",
+              "displayName": "output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3280,
+        2256
+      ],
+      "id": "a2dc0e66-6fd3-4f2d-9e3c-b4c3f9d6dbf9",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// items[0].json contains the structured trade signal\nconst trade = $input.first().json.output;\nconst now = new Date().toISOString().split(\"T\")[0];\n\n// Build a row to insert into Google Sheets\nreturn [\n  {\n    json: {\n      symbol: trade.symbol,\n      date_time: now,\n      action: trade.action,\n      entry: trade.entry_price,\n      stop_loss: trade.stop_loss,\n      take_profit: trade.take_profit,\n      position_size: trade.position_size,\n      confidence: trade.confidence,\n      timeframe: trade.timeframe,\n      trade_status: \"\", // default to empty, update manually or with logic\n      trade_end: \"\",       // default empty, will be set to \"tp\" or \"sl\" later\n      acct_balance: $input.first().json.acct_balance,\n      ammt_risked: \"\",\n      Leverage: \"1:15\",\n      profit_loss: \"\",\n      rr: \"\"\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        2256
+      ],
+      "id": "3fcb605d-bd63-4938-a992-2793996de058",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ",
+          "mode": "list",
+          "cachedResultName": "Trade Agent",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "date_time",
+              "lookupValue": "={{ $json.previous_trading_day }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2560,
+        2256
+      ],
+      "id": "8274c654-56b6-41d9-9e56-f8db28af8c02",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function getPreviousTradingDay(date) {\n  const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday\n  const newDate = new Date(date);\n\n  if (day === 0) {\n    // Sunday → go back to Friday\n    newDate.setDate(date.getDate() - 2);\n  } else if (day === 1) {\n    // Monday → go back to Friday\n    newDate.setDate(date.getDate() - 3);\n  } else {\n    // Any other weekday → go back one day\n    newDate.setDate(date.getDate() - 1);\n  }\n\n  return newDate.toISOString().split(\"T\")[0];\n}\n\nfunction getTodayTradingDay(date) {\n  const day = date.getDay();\n  if (day === 0 || day === 6) {\n    return null; // Not a trading day\n  }\n  return date.toISOString().split(\"T\")[0];\n}\n\n// Get dates\nconst today = new Date();\nconst todayTradingDay = getTodayTradingDay(today);\nconst previousTradingDay = getPreviousTradingDay(today);\n\n// Output\nreturn [\n  {\n    json: {\n      today_trading_day: todayTradingDay,\n      previous_trading_day: previousTradingDay\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        2256
+      ],
+      "id": "e2a08070-154e-488d-aa4a-774160e24667",
+      "name": "Code4"
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ JSON.stringify($json.output, null, 2) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        1856
+      ],
+      "id": "e85c4548-fec4-4df1-bf86-ae9d112c3ad3",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "sendTo": "mungairamsey7@gmail.com",
+        "subject": "Gold Price Forecast ",
+        "message": "={{ JSON.stringify($json.output, null, 2) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3072,
+        1872
+      ],
+      "id": "cf82701a-0c6c-462e-a187-84c35b957d7b",
+      "name": "Send a message",
+      "webhookId": "8a596635-9ab0-4b51-9df0-4290fa7910e7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5Eem4HqMMXUq4Ac4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2848,
+        2256
+      ],
+      "id": "33e59cda-1665-4945-b93f-7e8cd696973f",
+      "name": "Merge2",
+      "executeOnce": true,
+      "retryOnFail": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "date finder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "date finder": {
+      "main": [
+        [
+          {
+            "node": "Daily",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "4 Hour",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hourly",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "15 Minute",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "price quote",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "current price",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Entry point identifier",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "analyst ratings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily": {
+      "main": [
+        [
+          {
+            "node": "Daily analysis agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Daily analysis agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Daily analysis agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "4Hour analysis agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "4Hour analysis agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 Hour": {
+      "main": [
+        [
+          {
+            "node": "4Hour analysis agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "1Hour analysis agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "1Hour analysis agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hourly": {
+      "main": [
+        [
+          {
+            "node": "1Hour analysis agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "m15 analysis agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "m15 analysis agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 Minute": {
+      "main": [
+        [
+          {
+            "node": "m15 analysis agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily analysis agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4Hour analysis agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "1Hour analysis agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "m15 analysis agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "analyst ratings": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "news agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "news agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "news agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "current price": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Entry point identifier": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "price quote": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "aabe7b2a-cf4e-48d0-bb77-2413e5df5389",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf2dbac7946681ca7b3e10e8d83af81b6883302b18f614a88ca86b6b9d7f56ec"
+  },
+  "id": "q0GUr70RF8NYw6WX",
+  "tags": []
+}

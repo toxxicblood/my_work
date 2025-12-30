@@ -1,0 +1,532 @@
+{
+  "name": "Daily summary",
+  "nodes": [
+    {
+      "parameters": {
+        "sendTo": "mungairamsey01@gmail.com",
+        "subject": "My daily expenditure summary.",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1648,
+        -208
+      ],
+      "id": "2e8f19a4-ad5f-44ca-ab15-5d2d4a87dad9",
+      "name": "Send a message",
+      "webhookId": "086b1765-d554-48c3-b70d-d494edfb9123",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5Eem4HqMMXUq4Ac4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sort items by timestamp\nitems.sort((a, b) => new Date(a.json.Timestamp || a.json.timestamp) - new Date(b.json.Timestamp || b.json.timestamp));\n\nconst results = [];\nlet previousClosingBalance = null;\nlet dailyGroups = {};\n\n// Identify and extract previous day summary\nconst firstItem = items[0].json;\nconst isSummary = firstItem.closingBalance !== undefined && !firstItem.TransactionID;\n\nif (isSummary) {\n  previousClosingBalance = parseFloat(firstItem.closingBalance);\n  items.shift(); // Remove summary from list\n}\n\n// Group remaining transactions by date\nfor (const itemWrapper of items) {\n  const item = itemWrapper.json;\n\n  // Safe parsing\n  item.Amount = parseFloat(item.Amount) || 0;\n  item.TransactionCost = parseFloat(item.TransactionCost) || 0;\n  item.Balance = parseFloat(item.Balance) || 0;\n\n  const dateKey = item.Timestamp.split(\"T\")[0];\n\n  if (!dailyGroups[dateKey]) {\n    dailyGroups[dateKey] = {\n      transactions: [],\n      firstTimestamp: item.Timestamp,\n      date: item.Date,\n    };\n  }\n\n  dailyGroups[dateKey].transactions.push(item);\n}\n\n// Now process each date group\nfor (const [dateKey, group] of Object.entries(dailyGroups)) {\n  const transactions = group.transactions;\n  const firstTx = transactions[0];\n  const lastTx = transactions[transactions.length - 1];\n\n  const totalTransactions = transactions.length;\n\n  // Opening balance: use previous day's closing balance for first day, or derive from first transaction\n  let openingBalance;\n  if (previousClosingBalance !== null) {\n    openingBalance = previousClosingBalance;\n  } else {\n    const firstAmount = firstTx.Amount;\n    const isDebit = !firstTx.Sender || firstTx.Sender === \"NIL\";\n    openingBalance = isDebit ? firstTx.Balance + firstAmount : firstTx.Balance - firstAmount;\n  }\n\n  // Calculate money spent/received\n  let moneySpent = 0;\n  let moneyReceived = 0;\n  let transactionCost = 0;\n\n  for (let i = 0; i < transactions.length; i++) {\n    const current = transactions[i];\n    const prevBal = i === 0 ? openingBalance : transactions[i - 1].Balance;\n    const cost = current.TransactionCost || 0;\n    transactionCost += cost;\n\n    const delta = prevBal - current.Balance - cost;\n    const rounded = Math.round(delta * 100) / 100;\n\n    if (rounded > 0) {\n      moneySpent += rounded;\n    } else if (rounded < 0) {\n      moneyReceived += -rounded;\n    }\n  }\n\n  const closingBalance = lastTx.Balance;\n  previousClosingBalance = closingBalance; // Set for next day\n\n  // Generate ID\n  const id = new Date(group.firstTimestamp).toISOString().replace(/:/g, '-');\n\n  results.push({\n    json: {\n      id: id,\n      date: group.date,\n      timestamp: group.firstTimestamp,\n      openingBalance: Math.round(openingBalance * 100) / 100,\n      moneyReceived: Math.round(moneyReceived * 100) / 100,\n      moneySpent: Math.round(moneySpent * 100) / 100,\n      totalTransactions,\n      transactionCost: Math.round(transactionCost * 100) / 100,\n      closingBalance: Math.round(closingBalance * 100) / 100,\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -304
+      ],
+      "id": "5917dd70-f25b-426a-8fb9-a30251abb790",
+      "name": "daily calculator",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = items[0].json;\n\nconst message = `\n📅 *Daily M-Pesa Summary* – ${d.date}\n\n💰 *Opening Balance:* Ksh${d.openingBalance}\n📥 *Money Received:* Ksh${d.moneyReceived}\n📤 *Money Spent:* Ksh${d.moneySpent}\n🧾 *Total Transactions:* ${d.totalTransactions}\n💸 *Transaction Cost:* Ksh${d.transactionCost}\n🏁 *Closing Balance:* Ksh${d.closingBalance}\n`;\n\nreturn [{ json: { message } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        -400
+      ],
+      "id": "0f5d2975-09fb-4170-9e8d-eeebcf15d7c4",
+      "name": "text parse"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = items[0].json;\n\nconst html = `\n<!DOCTYPE html>\n<html>\n  <head>\n    <style>\n      body {\n        font-family: Arial, sans-serif;\n        padding: 20px;\n        background: #f9f9f9;\n        color: #333;\n      }\n      .summary-container {\n        background: #fff;\n        border-radius: 8px;\n        padding: 20px;\n        max-width: 500px;\n        margin: auto;\n        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);\n      }\n      h2 {\n        text-align: center;\n        color: #2c3e50;\n      }\n      table {\n        width: 100%;\n        border-collapse: collapse;\n        margin-top: 20px;\n      }\n      td {\n        padding: 8px 0;\n        border-bottom: 1px solid #eee;\n      }\n      td.label {\n        font-weight: bold;\n        color: #555;\n      }\n      td.value {\n        text-align: right;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"summary-container\">\n      <h2>📅 Daily M-Pesa Summary – ${d.date}</h2>\n      <table>\n        <tr>\n          <td class=\"label\">Opening Balance:</td>\n          <td class=\"value\">Ksh${d.openingBalance}</td>\n        </tr>\n        <tr>\n          <td class=\"label\">Money Received:</td>\n          <td class=\"value\">Ksh${d.moneyReceived}</td>\n        </tr>\n        <tr>\n          <td class=\"label\">Money Spent:</td>\n          <td class=\"value\">Ksh${d.moneySpent}</td>\n        </tr>\n        <tr>\n          <td class=\"label\">Total Transactions:</td>\n          <td class=\"value\">${d.totalTransactions}</td>\n        </tr>\n        <tr>\n          <td class=\"label\">Transaction Cost:</td>\n          <td class=\"value\">Ksh${d.transactionCost}</td>\n        </tr>\n        <tr>\n          <td class=\"label\">Closing Balance:</td>\n          <td class=\"value\">Ksh${d.closingBalance}</td>\n        </tr>\n      </table>\n    </div>\n  </body>\n</html>\n`;\n\nreturn [{ json: { html } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        -208
+      ],
+      "id": "8005bf22-393a-455c-ac33-1cfd8516ecae",
+      "name": "html parse"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 834748735,
+          "mode": "list",
+          "cachedResultName": "Daily totals",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit#gid=834748735"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "date"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "openingBalance",
+              "displayName": "openingBalance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "moneyReceived",
+              "displayName": "moneyReceived",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "moneySpent",
+              "displayName": "moneySpent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "totalTransactions",
+              "displayName": "totalTransactions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "transactionCost",
+              "displayName": "transactionCost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "closingBalance",
+              "displayName": "closingBalance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1200,
+        -304
+      ],
+      "id": "e8bf3631-cac0-4b6f-a29f-31ff701c5c51",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Safely extract timestamp\nconst rawTimestamp = items?.[0]?.json?.timestamp;\nif (!rawTimestamp) {\n  throw new Error(\"Missing timestamp in first item.\");\n}\n\nconst currentDate = new Date(rawTimestamp);\nif (isNaN(currentDate.getTime())) {\n  throw new Error(\"Invalid timestamp format.\");\n}\n\n// Utility to format date as DD/MM/YY with leading zeroes\nfunction formatDate(dateObj) {\n  const day = String(dateObj.getDate());\n  const month = String(dateObj.getMonth() + 1);\n  const year = String(dateObj.getFullYear()).slice(-2);\n  return `${day}/${month}/${year}`;\n}\n\n// Compute today, yesterday, and the day before yesterday\nconst leo = formatDate(currentDate);\n\nconst yesterdayDate = new Date(currentDate);\nyesterdayDate.setDate(currentDate.getDate() - 1);\nconst jana = formatDate(yesterdayDate);\n\nconst juziDate = new Date(currentDate);\njuziDate.setDate(currentDate.getDate() - 2);\nconst juzi = formatDate(juziDate);\n\nreturn [{\n  json: {\n    leo,\n    jana,\n    juzi\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -304
+      ],
+      "id": "ccb4ce70-0303-4540-b763-1942cc308fbb",
+      "name": "date finder1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        112,
+        -304
+      ],
+      "id": "b6540b1d-f120-4ee7-a0c6-70a742841f6d",
+      "name": "5 am trigger "
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "mpesa receipts ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Date",
+              "lookupValue": "={{ $json.leo }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        544,
+        -208
+      ],
+      "id": "6fdc392f-1d71-483c-a7fd-7d8d1c6d2cd6",
+      "name": "Days transaction",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 834748735,
+          "mode": "list",
+          "cachedResultName": "Daily totals",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit#gid=834748735"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "date",
+              "lookupValue": "={{ $json.jana }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        544,
+        -400
+      ],
+      "id": "61ceea20-004b-4ca3-9e58-d84d8846e34f",
+      "name": "Yesterdays closing balance",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        768,
+        -304
+      ],
+      "id": "54df7e29-ff6a-4265-8360-c5ca7e1931cf",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.message;\n\n// Remove leading/trailing whitespace and split lines\nconst lines = raw.trim().split('\\n').map(l => l.trim()).filter(l => l);\n\n// A regex to extract summary values\nconst re = {\n  date: /📅 \\*Daily M[-–—]?Pesa Summary\\*.*?(\\d{1,2}\\/\\d{1,2}\\/\\d{2,4})/,\n  opening: /^💰 \\*Opening Balance:\\* Ksh(.+)$/,\n  received: /^📥 \\*Money Received:\\* Ksh(.+)$/,\n  spent: /^📤 \\*Money Spent:\\* Ksh(.+)$/,\n  txCount: /^🧾 \\*Total Transactions:\\* (.+)$/,\n  txCost: /^💸 \\*Transaction Cost:\\* Ksh(.+)$/,\n  closing: /^🏁 \\*Closing Balance:\\* Ksh(.+)$/\n};\n\nconst result = {};\nfor (const line of lines) {\n  for (const key in re) {\n    const m = line.match(re[key]);\n    if (m) result[key] = m[1];\n  }\n}\n\n// Ensure all values exist, else fallback to empty string\nconst params = [\n  result.date || '',\n  result.opening || '',\n  result.received || '',\n  result.spent || '',\n  result.txCount || '',\n  result.txCost || '',\n  result.closing || ''\n];\n\nreturn [{\n  json: {\n    to: '254113220354',\n    templateName: 'daily_mpesa_summary',\n    languageCode: 'en_US',\n    parameters: params.map(text => ({ type: 'text', text }))\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        -400
+      ],
+      "id": "79dc5979-0f71-4c6c-9849-e505c9173b83",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "661873677016687",
+        "recipientPhoneNumber": "+254113220354",
+        "template": "daily_mpesa_summary|en",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.parameters[0].text }}"
+                  },
+                  {
+                    "text": "={{ $json.parameters[1].text }}"
+                  },
+                  {
+                    "text": "={{ $json.parameters[2].text }}"
+                  },
+                  {
+                    "text": "={{ $json.parameters[3].text }}"
+                  },
+                  {
+                    "text": "={{ $json.parameters[4].text }}"
+                  },
+                  {
+                    "text": "={{ $json.parameters[5].text }}"
+                  },
+                  {
+                    "text": "={{ $json.parameters[6].text }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        -400
+      ],
+      "id": "27c8a4d8-3327-43b7-8b8a-0d3198044cad",
+      "name": "Send template",
+      "webhookId": "eef0a3dc-e08a-4217-afa5-b4221e168383",
+      "retryOnFail": true,
+      "executeOnce": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "TXESRdeVepaaxqWC",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "daily calculator": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "text parse": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "html parse": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "text parse",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "html parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "date finder1": {
+      "main": [
+        [
+          {
+            "node": "Days transaction",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Yesterdays closing balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 am trigger ": {
+      "main": [
+        [
+          {
+            "node": "date finder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Days transaction": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Yesterdays closing balance": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "daily calculator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a7555175-733f-4b59-b3d7-bcdfef80a47b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf2dbac7946681ca7b3e10e8d83af81b6883302b18f614a88ca86b6b9d7f56ec"
+  },
+  "id": "Uf6GyMUaVwHJvVif",
+  "tags": []
+}

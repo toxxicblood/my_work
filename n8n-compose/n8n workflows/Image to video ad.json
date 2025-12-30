@@ -1,0 +1,2752 @@
+{
+  "name": "Image to video ad.",
+  "nodes": [
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Hello. Upload image files you want used for generation with an explanation of what you want the final output to be.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        336,
+        160
+      ],
+      "id": "2b7e677f-ea2a-47f3-96ba-64fcb772d464",
+      "name": "send file upload prompt",
+      "webhookId": "aff58267-b0e6-4469-a601-1fd744edc2c1",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const photos = $json.message?.photo || [];\nif (!photos.length) return [];\n\nconst largest = photos.sort((a, b) => b.file_size - a.file_size)[0];\n\nreturn [{\n  json: {\n    media_group_id: $json.message.media_group_id || null,\n    file_id: largest.file_id,\n    message_id: $json.message.message_id,\n    chat_id: $json.message.chat.id\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -144
+      ],
+      "id": "ecbcf159-e02f-41e9-a8ed-103b94c24822",
+      "name": "get largest image id"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot7295065325:AAFZ686zQM1PKnhKIFuTeIUfjvGT7gghwWA/getFile?file_id={{ $json.file_id[] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        160
+      ],
+      "id": "89f95e7e-5099-4db4-9ed8-dc35ff9e59a5",
+      "name": "get image path"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-pro-preview-03-25",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-pro-preview-03-25"
+        },
+        "text": "Describe the product and brand in this image in full detail. FUlly ignore the background. Focus ONLY on the product.Don't include any image affirmation text like this: 'Based on the images provided, here is a detailed description of the product and its brand'.",
+        "imageUrls": "=https://ucarecdn.com/{{ $('upload to a public url(uploadcare)').last().json.file }}/-/preview/750x1000/",
+        "simplify": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        944,
+        160
+      ],
+      "id": "ae9df5f8-5d22-4c76-9e4f-b8587533e568",
+      "name": "Analyze image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "AAcMhyajrhyrNt2k",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/bot7295065325:AAFZ686zQM1PKnhKIFuTeIUfjvGT7gghwWA/{{ $json.result.file_path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        752,
+        -144
+      ],
+      "id": "346481b9-f1ec-42df-96e9-7778a4a82f9a",
+      "name": "download binary image from telegram servers"
+    },
+    {
+      "parameters": {
+        "method": "=POST",
+        "url": "https://upload.uploadcare.com/base/",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "UPLOADCARE_PUB_KEY",
+              "value": "5fc968ac445cd957053f"
+            },
+            {
+              "name": "UPLOADCARE_STORE",
+              "value": "auto"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        752,
+        160
+      ],
+      "id": "dd306f4c-9768-4105-ab5b-f87fc41df7e9",
+      "name": "upload to a public url(uploadcare)"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-5",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2336,
+        -544
+      ],
+      "id": "77923085-8fc3-4376-99b0-acdfc27dfce3",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "R5wVlFphdNvtXs33",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        2432,
+        -544
+      ],
+      "id": "89f414f1-5ab5-40e1-950f-5f77e7ca6525",
+      "name": "Think"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"image_prompt\": {\n    \"model\": \"nanobanana\",\n    \"positive_prompt\": \"...\",\n    \"negative_prompt\": \"...\",\n    \"style_guidance\": \"...\",\n    \"resolution\": \"1024x1024\"\n  },\n  \"video_prompt\": {\n    \"model\": \"veo3\",\n    \"first_frame_reference\": \"...\",\n    \"transition_description\": \"...\",\n    \"camera_movement\": \"...\",\n    \"audio_design\": \"...\",\n    \"duration_seconds\": 8,\n    \"resolution\": \"1080p\",\n    \"physics_realism\": true,\n    \"sync_audio\": true,\n    \"negative_prompt\": \"...\"\n  },\n  \"short_caption\": \"A short catchy tagline for the campaign.\",\n  \"creative_summary\": \"A structured creative summary that explains the concept and how the image and video align with the product story.\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2528,
+        -544
+      ],
+      "id": "726ee06c-0827-4a3e-aed2-6db91ced22ba",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3def9c1-cc5a-41bb-9d02-21dae61cf7a0",
+              "name": "image_prompt",
+              "value": "={{ $json.output.image_prompt }}",
+              "type": "object"
+            },
+            {
+              "id": "dc538ef4-71e2-407b-8d5b-0a5152d19cb4",
+              "name": "short_caption",
+              "value": "={{ $json.output.short_caption }}",
+              "type": "string"
+            },
+            {
+              "id": "f35714d5-7636-4e89-896e-ed97bc1372d8",
+              "name": "creative_summary",
+              "value": "={{ $json.output.creative_summary }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2288,
+        -144
+      ],
+      "id": "44a47de3-f938-42af-abec-4ed59da9aab8",
+      "name": "Set prompts"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "message": "=** 🎲 CAPTION**\n {{ $json.short_caption }}\n\n** 📝 CREATIVE SUMMARY**\n{{ $json.creative_summary }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Approve",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Comments",
+              "placeholder": "Type your comments here."
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 45,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2480,
+        -144
+      ],
+      "id": "38633033-6c3a-4a21-8c30-8259ac3faaa9",
+      "name": "get approval",
+      "webhookId": "edc6d74d-890e-45c2-aa23-fdcb4097755d",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d66b939e-002d-4295-a7b2-57d6ebc9454a",
+              "leftValue": "={{ $json.data.Approve }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2688,
+        -128
+      ],
+      "id": "ff6103cb-0600-4cfb-b40e-436ad72abe94",
+      "name": "Approved or not"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "Generating prompts, this may take some time. Check back to approve prompts",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1552,
+        -144
+      ],
+      "id": "b675dd68-c4cb-49ad-927e-8db647e4a47e",
+      "name": "Send a text message",
+      "webhookId": "6f6ad768-a4a5-4031-bc91-50ab4b2b6dab",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the initial creative brief:\n{{ \n  $('Activate on message to bot').last().json.message?.caption && $('Activate on message to bot').last().json.message.caption.trim() !== '' \n    ? $('Activate on message to bot').last().json.message.caption \n    : 'Generate a cool product visual ad' \n}}\n\nAdditional comments:\n{{ $('get approval').last().json.data.Comments }}\n\nDescription of the product:\n{{ $('Analyze image').last().json.candidates[0].content.parts[0].text }}\n\nUse the think tool to double check your output",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=\"You are an AI creative prompt generator. Your role is to receive a product image description and a creative brief from the user, then output two highly detailed prompts: one for an image generation tool (NanoBanana) and one for a video generation tool (Veo3). Your goal is to transform a basic product image into a polished, commercial-quality hero image and then create a dynamic video concept that transitions from the static image to an engaging motion clip.\\\\n\\\\n---\\\\n\\\\n**Your Responsibilities:**\\\\n1. Parse the user's product image description and creative brief.\\\\n2. Generate a NanoBanana image prompt following Google’s Image Prompt Guide (https://cloud.google.com/vertex-ai/generative-ai/docs/image/img-gen-prompt-guide). The image prompt must be vivid, concise, and optimized for high-quality product visuals.\\\\n3. Generate a Veo3 video prompt designed to create a seamless transition from the NanoBanana image to a cinematic video sequence. This should include a first-frame reference to the NanoBanana output, camera movements, actions, transitions, lighting changes, sound cues, and style descriptors.\\\\n4. Use clear fields for positive attributes (what you want), negative attributes (what to avoid), style and tone (art direction), and technical specifications (resolution, aspect ratio, duration).\\\\n5. Ensure both prompts are aligned visually, tonally, and narratively — the video prompt must feel like a natural continuation of the image prompt.\\\\n\\\\n---\\\\n\\\\n**NanoBanana Image Prompt Requirements:**\\\\n- Product-centric, hyper-detailed description of scene, lighting, materials, mood, and style.\\\\n- Resolution at least 1024x1024.\\\\n- Include style guidance (photographic style, color grading, composition).\\\\n- Include negative prompt (what to avoid: distortion, bad proportions, irrelevant objects, low quality).\\\\n\\\\n**Veo3 Video Prompt Requirements:**\\\\n- Reference the NanoBanana image as the first frame.\\\\n- Describe a dynamic transition from the static image to a lively scene (e.g., product movement, ingredient explosions, camera sweeps, environmental effects).\\\\n- Specify duration (6–8 seconds recommended).\\\\n- Specify resolution (1080p).\\\\n- Include physics realism: true-to-life motion, natural light dynamics, accurate shadows.\\\\n- Include audio design guidance: ambient sounds, SFX, or music mood.\\\\n- Include negative prompt (what to avoid: unnatural motion, glitch effects, low framerate, irrelevant elements).\\\\n\\\\n---\\\\n\\\\n**Your Output Format:**\\\\nReturn a single JSON object with the following structure:\\\\n```json\\\\n{\\\\n  \\\\\\\"image_prompt\\\\\\\": {\\\\n    \\\\\\\"model\\\\\\\": \\\\\\\"nanobanana\\\\\\\",\\\\n    \\\\\\\"positive_prompt\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"negative_prompt\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"style_guidance\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"resolution\\\\\\\": \\\\\\\"1024x1024\\\\\\\"\\\\n  },\\\\n  \\\\\\\"video_prompt\\\\\\\": {\\\\n    \\\\\\\"model\\\\\\\": \\\\\\\"veo3\\\\\\\",\\\\n    \\\\\\\"first_frame_reference\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"transition_description\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"camera_movement\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"audio_design\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"duration_seconds\\\\\\\": 8,\\\\n    \\\\\\\"resolution\\\\\\\": \\\\\\\"1080p\\\\\\\",\\\\n    \\\\\\\"physics_realism\\\\\\\": true,\\\\n    \\\\\\\"sync_audio\\\\\\\": true,\\\\n    \\\\\\\"negative_prompt\\\\\\\": \\\\\\\"...\\\\\\\"\\\\n  },\\\\n  \\\\\\\"short_caption\\\\\\\": \\\\\\\"A short catchy tagline for the campaign.\\\\\\\",\\\\n  \\\\\\\"creative_summary\\\\\\\": \\\\\\\"A structured creative summary that explains the concept and how the image and video align with the product story.\\\\\\\"\\\\n}\\\\n```\\\\n\\\\nMake sure each field is populated with vivid, sensory, and brand-relevant language tailored to the product description and creative brief provided by the user.\\\\n\\\\nYour tone is that of a seasoned creative director: confident, brand-savvy, visually literate, and strategic. Always output stringified JSON exactly as above with no additional commentary.Output only valid JSON with no code fences, no explanations, no markdown.\"\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        3168,
+        -144
+      ],
+      "id": "d1b4b510-2f3d-4641-a8fb-f14ca970bfcc",
+      "name": "Prompt revision agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the initial creative brief:\n{{ \n  $('Activate on message to bot').last().json.message?.caption && $('Activate on message to bot').last().json.message.caption.trim() !== '' \n    ? $('Activate on message to bot').last().json.message.caption \n    : 'Generate a stunning product mockup' \n}}\n\nDescription of the product:\n{{ $('Analyze image').last().json.candidates[0].content.parts[0].text }}\n\nUse the think tool to double check your output",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=\"You are an AI creative prompt generator. Your role is to receive a product image description and a creative brief from the user, then output two highly detailed prompts: one for an image generation tool (NanoBanana) and one for a video generation tool (Veo3). Your goal is to transform a basic product image into a polished, commercial-quality hero image and then create a dynamic video concept that transitions from the static image to an engaging motion clip.\\\\n\\\\n---\\\\n\\\\n**Your Responsibilities:**\\\\n1. Parse the user's product image description and creative brief.\\\\n2. Generate a NanoBanana image prompt following Google’s Image Prompt Guide (https://cloud.google.com/vertex-ai/generative-ai/docs/image/img-gen-prompt-guide). The image prompt must be vivid, concise, and optimized for high-quality product visuals.\\\\n3. Generate a Veo3 video prompt designed to create a seamless transition from the NanoBanana image to a cinematic video sequence. This should include a first-frame reference to the NanoBanana output, camera movements, actions, transitions, lighting changes, sound cues, and style descriptors.\\\\n4. Use clear fields for positive attributes (what you want), negative attributes (what to avoid), style and tone (art direction), and technical specifications (resolution, aspect ratio, duration).\\\\n5. Ensure both prompts are aligned visually, tonally, and narratively — the video prompt must feel like a natural continuation of the image prompt.\\\\n\\\\n---\\\\n\\\\n**NanoBanana Image Prompt Requirements:**\\\\n- Product-centric, hyper-detailed description of scene, lighting, materials, mood, and style.\\\\n- Resolution at least 1024x1024.\\\\n- Include style guidance (photographic style, color grading, composition).\\\\n- Include negative prompt (what to avoid: distortion, bad proportions, irrelevant objects, low quality).\\\\n\\\\n**Veo3 Video Prompt Requirements:**\\\\n- Reference the NanoBanana image as the first frame.\\\\n- Describe a dynamic transition from the static image to a lively scene (e.g., product movement, ingredient explosions, camera sweeps, environmental effects).\\\\n- Specify duration (6–8 seconds recommended).\\\\n- Specify resolution (1080p).\\\\n- Include physics realism: true-to-life motion, natural light dynamics, accurate shadows.\\\\n- Include audio design guidance: ambient sounds, SFX, or music mood.\\\\n- Include negative prompt (what to avoid: unnatural motion, glitch effects, low framerate, irrelevant elements).\\\\n\\\\n---\\\\n\\\\n**Your Output Format:**\\\\nReturn a single JSON object with the following structure:\\\\n```json\\\\n{\\\\n  \\\\\\\"image_prompt\\\\\\\": {\\\\n    \\\\\\\"model\\\\\\\": \\\\\\\"nanobanana\\\\\\\",\\\\n    \\\\\\\"positive_prompt\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"negative_prompt\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"style_guidance\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"resolution\\\\\\\": \\\\\\\"1024x1024\\\\\\\"\\\\n  },\\\\n  \\\\\\\"video_prompt\\\\\\\": {\\\\n    \\\\\\\"model\\\\\\\": \\\\\\\"veo3\\\\\\\",\\\\n    \\\\\\\"first_frame_reference\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"transition_description\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"camera_movement\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"audio_design\\\\\\\": \\\\\\\"...\\\\\\\",\\\\n    \\\\\\\"duration_seconds\\\\\\\": 8,\\\\n    \\\\\\\"resolution\\\\\\\": \\\\\\\"1080p\\\\\\\",\\\\n    \\\\\\\"physics_realism\\\\\\\": true,\\\\n    \\\\\\\"sync_audio\\\\\\\": true,\\\\n    \\\\\\\"negative_prompt\\\\\\\": \\\\\\\"...\\\\\\\"\\\\n  },\\\\n  \\\\\\\"short_caption\\\\\\\": \\\\\\\"A short catchy tagline for the campaign.\\\\\\\",\\\\n  \\\\\\\"creative_summary\\\\\\\": \\\\\\\"A structured creative summary that explains the concept and how the image and video align with the product story.\\\\\\\"\\\\n}\\\\n```\\\\n\\\\nMake sure each field is populated with vivid, sensory, and brand-relevant language tailored to the product description and creative brief provided by the user.\\\\n\\\\nYour tone is that of a seasoned creative director: confident, brand-savvy, visually literate, and strategic. Always output stringified JSON exactly as above with no additional commentary.Output only valid JSON with no code fences, no explanations, no markdown.\"\n",
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        -144
+      ],
+      "id": "60ca8441-c819-41c7-969f-df863455798f",
+      "name": "Initial prompt agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "Regenerating prompts, this may take some time. Check back to approve prompts",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2944,
+        -144
+      ],
+      "id": "8b6d782e-bc18-43c1-aaae-128e1921cfaf",
+      "name": "Waiting text message.",
+      "webhookId": "6f6ad768-a4a5-4031-bc91-50ab4b2b6dab",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').item.json.message.chat.id }}",
+        "text": "Great! Your creative is now in progress. This may take some time.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        176
+      ],
+      "id": "3ced210b-75e1-4081-8d77-b95e0c39e96f",
+      "name": "in progress",
+      "webhookId": "6f6ad768-a4a5-4031-bc91-50ab4b2b6dab",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"system_instruction\": {\n    \"parts\": [\n      {\n        \"text\": \"You are a rendering agent. Output ONLY the scenario described in the  text. Do not add explanations, acknowledgements, or phrases like 'I can do that'. ONLY OUTPUT IMAGE. Output only valid IMAGE  with no code fences, no explanations, no markdown no dots or fullstops NOTHING EXCEPT THE IMAGE\"\n      }\n    ]\n  },\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Take the product in the image and place it in this scenario:{{ $('Set prompts').last().json.image_prompt['positive_prompt'] }}{{ $('Set prompts').last().json.image_prompt.negative_prompt }}{{ $('Set prompts').last().json.image_prompt.style_guidance }}{{ $('Set prompts').last().json.image_prompt.resolution }}\"\n        },\n        {\n          \"inline_data\": {\n            \"mime_type\": \"{{ $binary.data.mimeType }}\",\n            \"data\": \"{{ $json.data }}\"\n          }\n        }\n      ]\n    }\n  ]\n}\n",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2032,
+        64
+      ],
+      "id": "239f657a-fd14-4510-83d1-d35fa3fbde0a",
+      "name": "generate image(nano banana)",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F1xmwX9FMr6uQXXb",
+          "name": "google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/bot7295065325:AAFZ686zQM1PKnhKIFuTeIUfjvGT7gghwWA/{{ $('get image path').last().json.result.file_path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1504,
+        176
+      ],
+      "id": "b333aacf-1655-414b-adec-8fd9304cff51",
+      "name": "download binary image from telegram servers2"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {
+          "encoding": "base64",
+          "keepSource": "both"
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        64
+      ],
+      "id": "c4755ebf-af98-41ca-a289-9079f4e3746f",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "Describe the product and brand in this image in full detail. FUlly ignore the background. Focus ONLY on the product.Don't include any image affirmation text like this: 'Based on the images provided, here is a detailed description of the product and its brand'.",
+        "imageUrls": "=https://ucarecdn.com/{{ $json.file }}/-/preview/750x1000/",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        928,
+        384
+      ],
+      "id": "f74c7803-f5a0-4405-ac86-3aa55fbedcbc",
+      "name": "Analyze image1",
+      "credentials": {
+        "openAiApi": {
+          "id": "aTxM5NoNsC6GTPKQ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data[0].b64_json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        272
+      ],
+      "id": "cf35b6ae-ccdd-4a0d-a21d-bf9bb86ca924",
+      "name": "Convert to File",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "Analyzing image.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        -144
+      ],
+      "id": "fb7c997b-1b40-446d-a632-ac31e4bda98c",
+      "name": "Send a text message1",
+      "webhookId": "674a2cf3-c609-496b-b775-67ef198f8440",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "iGemini system prompt\n\"You are a seasoned creative director AI agent with deep expertise in visual storytelling, branding, and advertising. Your mission is to assist users by transforming a basic product image and a creative brief into a comprehensive set of assets for a marketing campaign. You will generate an image prompt for the 'nanobanana' image generation tool and a video prompt for the 'Veo3' video generation tool. Additionally, you will create a short, engaging caption and a structured creative summary. The final output must be a single, stringified JSON object.\",\n  \"instructions\": {\n    \"input\": \"You will be given a `product_image_description` (a textual description of the user's starting image) and a `creative_brief` (the user's creative intent, including target audience, brand personality, and key message).\",\n    \"output_format\": \"Your entire output must be a single stringified JSON object. The JSON object should have four keys: `image_prompt`, `video_prompt`, `caption`, and `creative_summary`.\",\n    \"image_prompt_generation\": {\n      \"tool\": \"nanobanana\",\n      \"guidelines\": \"The image prompt should be a detailed, descriptive paragraph. Start with a clear subject and action, then build upon it with specifics about the scene, style, lighting, and composition. Leverage nanobanana's strengths, such as style transfer and character/element consistency. The prompt should aim to create a visually stunning and professional advertisement-style image from the initial, simpler product image.\",\n      \"structure\": {\n        \"subject\": \"The primary focus of the image (e.g., the product).\",\n        \"action\": \"What the subject is doing or what is happening around it.\",\n        \"scene\": \"The environment and background.\",\n        \"style\": \"The overall aesthetic (e.g., 'photorealistic', 'vibrant and energetic', 'dramatic and moody').\",\n        \"lighting\": \"Describe the lighting to set the mood (e.g., 'soft, natural morning light', 'dramatic studio lighting').\",\n        \"camera_shot\": \"Specify the camera angle and shot type (e.g., 'dynamic low-angle shot', 'close-up on the product').\"\n      }\n    },\n    \"video_prompt_generation\": {\n      \"tool\": \"Veo3\",\n      \"guidelines\": \"The video prompt should describe a short, 8-second video that shows a transformation from the original product image to the newly generated dynamic image. Veo3 can generate video from an initial image and text, and it also supports synchronized audio. Your prompt must include cues for both the visual transition and the audio elements.\",\n      \"structure\": {\n        \"initial_state\": \"Start by describing the initial, simple product image.\",\n        \"transformation\": \"Describe the transition. Use dynamic language like 'explodes with...', 'transforms into...', 'is splashed by...'.\",\n        \"final_state\": \"Describe the final, dynamic scene, which should match the image generated by the nanobanana prompt.\",\n        \"audio_cues\": \"Include specific sound design elements. For example: '[SOUND of a milk splash], [upbeat, energetic music starts to play], [SOUND of crunching cereal].'\"\n      }\n    },\n    \"caption_generation\": \"Generate a short, catchy caption (under 150 characters) suitable for social media. It should be relevant to the product and the visual style of the generated image and video.\",\n    \"creative_summary_generation\": {\n      \"guidelines\": \"Provide a structured summary of the creative direction. This should be a concise overview of the choices made for the prompts.\",\n      \"structure\": {\n        \"concept\": \"A one-sentence summary of the creative idea.\",\n        \"target_audience\": \"Who the ad is for, based on the creative brief.\",\n        \"key_visuals\": \"The main visual elements in the generated image and video.\",\n        \"mood_and_tone\": \"The overall feeling and style of the assets.\",\n        \"brand_message\": \"The core message being communicated.\"\n      }\n    },\n    \"example_output\": {\n      \"image_prompt\": \"stringified JSON of the image prompt\",\n      \"video_prompt\": \"stringified JSON of the video prompt\",\n      \"caption\": \"string\",\n      \"creative_summary\": {\n        \"concept\": \"string\",\n        \"target_audience\": \"string\",\n        \"key_visuals\": \"string\",\n        \"mood_and_tone\": \"string\",\n        \"brand_message\": \"string\"\n      }\n    }\n  }\n}\n\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1760,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "e2342b78-205c-4fb2-abc6-6f80acd24b72",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "iGemini system prompt\n\"You are a seasoned creative director AI agent with deep expertise in visual storytelling, branding, and advertising. Your mission is to assist users by transforming a basic product image and a creative brief into a comprehensive set of assets for a marketing campaign. You will generate an image prompt for the 'nanobanana' image generation tool and a video prompt for the 'Veo3' video generation tool. Additionally, you will create a short, engaging caption and a structured creative summary. The final output must be a single, stringified JSON object.\",\n  \"instructions\": {\n    \"input\": \"You will be given a `product_image_description` (a textual description of the user's starting image) and a `creative_brief` (the user's creative intent, including target audience, brand personality, and key message).\",\n    \"output_format\": \"Your entire output must be a single stringified JSON object. The JSON object should have four keys: `image_prompt`, `video_prompt`, `caption`, and `creative_summary`.\",\n    \"image_prompt_generation\": {\n      \"tool\": \"nanobanana\",\n      \"guidelines\": \"The image prompt should be a detailed, descriptive paragraph. Start with a clear subject and action, then build upon it with specifics about the scene, style, lighting, and composition. Leverage nanobanana's strengths, such as style transfer and character/element consistency. The prompt should aim to create a visually stunning and professional advertisement-style image from the initial, simpler product image.\",\n      \"structure\": {\n        \"subject\": \"The primary focus of the image (e.g., the product).\",\n        \"action\": \"What the subject is doing or what is happening around it.\",\n        \"scene\": \"The environment and background.\",\n        \"style\": \"The overall aesthetic (e.g., 'photorealistic', 'vibrant and energetic', 'dramatic and moody').\",\n        \"lighting\": \"Describe the lighting to set the mood (e.g., 'soft, natural morning light', 'dramatic studio lighting').\",\n        \"camera_shot\": \"Specify the camera angle and shot type (e.g., 'dynamic low-angle shot', 'close-up on the product').\"\n      }\n    },\n    \"video_prompt_generation\": {\n      \"tool\": \"Veo3\",\n      \"guidelines\": \"The video prompt should describe a short, 8-second video that shows a transformation from the original product image to the newly generated dynamic image. Veo3 can generate video from an initial image and text, and it also supports synchronized audio. Your prompt must include cues for both the visual transition and the audio elements.\",\n      \"structure\": {\n        \"initial_state\": \"Start by describing the initial, simple product image.\",\n        \"transformation\": \"Describe the transition. Use dynamic language like 'explodes with...', 'transforms into...', 'is splashed by...'.\",\n        \"final_state\": \"Describe the final, dynamic scene, which should match the image generated by the nanobanana prompt.\",\n        \"audio_cues\": \"Include specific sound design elements. For example: '[SOUND of a milk splash], [upbeat, energetic music starts to play], [SOUND of crunching cereal].'\"\n      }\n    },\n    \"caption_generation\": \"Generate a short, catchy caption (under 150 characters) suitable for social media. It should be relevant to the product and the visual style of the generated image and video.\",\n    \"creative_summary_generation\": {\n      \"guidelines\": \"Provide a structured summary of the creative direction. This should be a concise overview of the choices made for the prompts.\",\n      \"structure\": {\n        \"concept\": \"A one-sentence summary of the creative idea.\",\n        \"target_audience\": \"Who the ad is for, based on the creative brief.\",\n        \"key_visuals\": \"The main visual elements in the generated image and video.\",\n        \"mood_and_tone\": \"The overall feeling and style of the assets.\",\n        \"brand_message\": \"The core message being communicated.\"\n      }\n    },\n    \"example_output\": {\n      \"image_prompt\": \"stringified JSON of the image prompt\",\n      \"video_prompt\": \"stringified JSON of the video prompt\",\n      \"caption\": \"string\",\n      \"creative_summary\": {\n        \"concept\": \"string\",\n        \"target_audience\": \"string\",\n        \"key_visuals\": \"string\",\n        \"mood_and_tone\": \"string\",\n        \"brand_message\": \"string\"\n      }\n    }\n  }\n}\n\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2944,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "1c6f3876-32d3-4508-a494-40b5bc1e3afe",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "#3 Iage analysis loop\nAdd an image analysis loop to refine the image analysis throug hhuman in the loop",
+        "height": 80
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        864,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "53efedad-ac26-455f-92af-cde71f5e1fb7",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of items) {\n  // This safely targets the field name, even with a space\n  item.binary.data.mimeType = 'image/jpeg';\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        176
+      ],
+      "id": "3fbee87d-6b9d-4f5f-af48-a257de521142",
+      "name": "convert file mime-type"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/edits",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-image-1"
+            },
+            {
+              "name": "prompt",
+              "value": "=Take the product in the image and place it in this scenario:{{ $('Set prompts').last().json.image_prompt['positive_prompt'] }}{{ $('Set prompts').last().json.image_prompt.negative_prompt }}{{ $('Set prompts').last().json.image_prompt.style_guidance }}{{ $('Set prompts').last().json.image_prompt.resolution }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1824,
+        272
+      ],
+      "id": "cfcba530-2c4a-4e3e-87a6-7e6320823f94",
+      "name": "generate image (gpt api)",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hAwPg4SFeqIpZhkW",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3120,
+        176
+      ],
+      "id": "8265f0c2-68d8-49f2-9820-255eb074d466",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "56476847-43e9-4c32-8764-62161dea8496",
+                    "leftValue": "={{ $json.data['Proceed with'] }}",
+                    "rightValue": "Regenerate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Regenerate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data['Proceed with'] }}",
+                    "rightValue": "Image 1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "caa0e57e-5f6e-467e-89bc-e3851ecd8255"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image 1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d92f11ee-d4a1-42f9-b596-37873e317366",
+                    "leftValue": "={{ $json.data['Proceed with'] }}",
+                    "rightValue": "Image 2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image 2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3296,
+        288
+      ],
+      "id": "f0318cfa-3074-4fd3-bfac-2bc2ebcd32e3",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "message": "Choose the image to use for video generation.\nImage 1\nImage 2\nRegenerate",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Proceed with",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Image 1"
+                  },
+                  {
+                    "option": "Image 2"
+                  },
+                  {
+                    "option": "Regenerate"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Comments ",
+              "placeholder": "Give suggestion for improvement."
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 45,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3296,
+        176
+      ],
+      "id": "a65a6fe3-55a8-4931-b87c-b8f483ae0897",
+      "name": "get way forward",
+      "webhookId": "268dc98b-edac-4168-b395-6e1e762d28dc",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Gemini system prompt\nYou are an expert-level AI Prompt Revision Agent. Your sole purpose is to refine and regenerate prompts for a text-to-image AI to create professional, high-quality commercial product photography.\nYou will be given three inputs:\nThe User's Recommendation: A plain-language request for how to change the image.\nThe Previous Prompt: The complete prompt structure that was used to generate the last image(s). This includes a positive_prompt, negative_prompt, style_guidance, and resolution.\nThe Product Description: A factual, detailed description of the product being photographed. This is the source of truth for the product's appearance.\nYour Task:\nYour task is to meticulously analyze these three inputs and generate a revised, superior prompt. The new prompt must incorporate the user's desired changes while ensuring the resulting image will be a professional, aesthetically pleasing, and accurate representation of the product.\nCore Principles of Revision\nPrioritize the User's Recommendation: Your primary goal is to understand the user's intent—even if expressed simply (e.g., \"make it more colorful,\" \"make it look more professional\")—and translate it into concrete, technical prompt modifications.[1]\nMaintain Product Accuracy: The Product Description is non-negotiable. Do not alter the core attributes of the product (e.g., its shape, material, color, branding). The prompt must always generate an image that is true to the product's design.\nThink Like a Commercial Photographer: Employ the language and concepts of professional photography.[2] Use specific terminology for lighting, camera settings, composition, and mood to achieve a high-end, studio-quality look.[3][4]\nStep-by-Step Workflow\nAnalyze the User's Recommendation:\nIdentify the core desire. Is it about color, lighting, quality, mood, composition, or background?\nFor example, if the user says \"make it higher quality,\" you should focus on adding keywords related to resolution, detail, and lens clarity (ultra-detailed, 4K, sharp focus, 85mm lens) and strengthening the negative prompt against imperfections (blurry, noise, jpeg artifacts).[5][6]\nIf the user says \"make it more colourful,\" you should introduce a vibrant color palette, specify lighting that enhances color (\"vibrant,\" \"saturated colors,\" \"bold,\" \"accent lighting\"), and potentially adjust the style_guidance to reflect a more dynamic aesthetic.[7][8]\nDeconstruct the Previous Prompt:\nRead through the positive_prompt, negative_prompt, and style_guidance to understand the starting point.\nIdentify which specific keywords and phrases should be removed, modified, or added to achieve the user's goal.\nSynthesize and Revise:\npositive_prompt: This is where you describe the ideal image.\nBe Specific and Detailed: Start with the subject, then add descriptive keywords separated by commas.[7][9]\nStructure: Follow a logical flow: (Subject and its details), (Setting/Background), (Lighting), (Composition/Framing), (Quality/Resolution).[6]\nInject Professional Terms: Use words like \"softbox lighting,\" \"rim light,\" \"cinematic,\" \"golden hour,\" \"shallow depth of field,\" \"symmetrical composition,\" \"product hero shot.\"[2][4]\nnegative_prompt: This is crucial for quality control.\nRefine the existing negative prompts to be more specific.\nAdd keywords that prevent the opposite of the user's request. For a \"colourful\" request, you might add monochrome, muted, desaturated.\nAlways include standard negative prompts for product photography: blurry, distorted, extra limbs, disfigured, text, watermark, low quality, noise, scratches, dust, fingerprints.[7]\nstyle_guidance: This defines the overall aesthetic.\nModify this section to align with the user's feedback. A request for a \"more exciting\" image could change the style from \"premium minimalist tech aesthetic\" to \"dynamic and energetic commercial aesthetic.\"\nresolution: If the user's request implies a need for higher quality, consider increasing the resolution (e.g., from 1024x1024 to a higher standard if applicable).\nOutput Format\nYou must provide the output in the exact same structured format as the \"Previous Prompt\" input.\nExample Scenario:\nUser Recommendation: \"make it more colourful and the images higher quality\"\nProduct Description: (The provided thinkplus earbuds description)\nPrevious Prompt: (The provided original prompt)\nBased on this, your thought process should be:\nUser wants: More color + higher quality.\nProduct is: Gunmetal case, black earbuds, white tips. Must keep these colors accurate.\nPlan:\nPositive Prompt: Keep the core product description. Change the background from \"charcoal-to-black gradient\" to something more colorful but still professional, like a \"deep blue to vibrant magenta gradient.\" Add quality keywords like \"hyper-realistic,\" \"4K,\" \"crystal clear.\"\nNegative Prompt: Add dull colors, monochrome, muted tones, low resolution, blurry, noisy.\nStyle Guidance: Change \"cool neutral grading\" to \"vibrant, high-contrast grading with saturated tones.\" Add \"ultra-sharp focus\" and perhaps specify a higher-end lens like \"100mm macro lens.\"\nResolution: Increase to a higher value if possible.\nNow, generate the revised prompt based on this plan.\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3280,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "7bac2ac5-4ecd-459d-8f55-d785363dfb1c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "={{ $json.candidates[0].content.parts[0].text\n    .replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>') // bold\n    .replace(/\\*(.*?)\\*/g, '<i>$1</i>')     // italic\n    .replace(/\\n/g, '\\n')                   // real newlines instead of <br>\n    .replace(/\\*   /g, '• ')                // optional: convert bullet pattern\n}}\n",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        -144
+      ],
+      "id": "358baaa7-53a3-421c-bde4-3fc88e0ac1a0",
+      "name": "send analysis",
+      "webhookId": "bd08dec2-df8b-4c38-97d4-c012894bc9b0",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the initial prompt:\n{{ $('Set prompts').last().json.image_prompt['positive_prompt'] }}{{ $('Set prompts').last().json.image_prompt.negative_prompt }}{{ $('Set prompts').last().json.image_prompt.style_guidance }}{{ $('Set prompts').last().json.image_prompt.resolution }}\n\nAdditional comments:\n{{ $('get way forward').last().json.data['Comments '] }}\n\nDescription of the product:\n{{ $('Analyze image').last().json.candidates[0].content.parts[0].text }}\n\nUse the think tool to double check your output",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# System Layer\n\n## Role\n\nYou are a **Prompt Revision Agent** specialized in generating and refining **professional product image prompts** for generative image models.\n\nYour role is to take:\n\n1. A **previous prompt** (the starting image prompt).\n2. A **user’s recommendation** (feedback, e.g., “make it more colorful and higher quality”).\n3. A **product description** (authoritative details about the product).\n\nYour goal is to **regenerate a new image prompt** that:\n\n* Accurately represents the product.\n* Integrates the user’s requested changes.\n* Maintains professional, photorealistic, and industry-standard image quality.\n* Outputs the result in a **strict JSON schema**.\n\n## Instructions\n\n1. Always respect the **product description** as the source of truth. Never invent features not listed there.\n2. Adjust the **positive\\_prompt** to reflect user recommendations while keeping realism and product integrity.\n3. Update the **negative\\_prompt** to explicitly prevent errors (e.g., misbranded logos, distortions, poor lighting, irrelevant props).\n4. Keep the **style\\_guidance** professional, consistent with product photography or the requested visual aesthetic.\n5. Adjust **resolution** or quality specifications if the user requests improvements.\n6. Always output the result as **valid JSON** with the keys:\n\n```json\n{\n  \"model\": \"\",\n  \"positive_prompt\": \"\",\n  \"negative_prompt\": \"\",\n  \"style_guidance\": \"\",\n  \"resolution\": \"\"\n}\n```\n\n7. Do not include explanations or commentary outside the JSON.\n\n## Output Format\n\nAlways respond with a single JSON object.\n\nExample:\n\n```json\n{\n  \"model\": \"nanobanana\",\n  \"positive_prompt\": \"Vivid, high-quality commercial hero shot of thinkplus wireless earbuds and their charging case on a seamless gradient background. Pill-shaped charging case in glossy metallic gunmetal, crisp diagonal lid seam, and centered logo. Earbuds symmetrically flanking the case, rendered with vibrant highlights and enhanced clarity. Reflective acrylic base providing a polished mirror effect.\",\n  \"negative_prompt\": \"Misspelled branding (avoid 'think plus'), extra logos, watermarks, cluttered background, low resolution, haze, muted or dull colors, noise, incorrect proportions, warped geometry, irrelevant props.\",\n  \"style_guidance\": \"Premium studio product photography with dynamic color grading, refined lighting, enhanced saturation, and crisp f/8 sharpness. Symmetrical hero composition with polished commercial aesthetic.\",\n  \"resolution\": \"2048x2048\"\n}\n```\n\n---\n\n# Input Layer\n\nAccept three inputs from the workflow:\n\n* `previous_prompt` (string)\n* `user_recommendation` (string\n* `product_description` (string)\n\n---\n\n# Action Layer\n\n* Parse the inputs.\n* Revise the previous prompt according to user recommendations.\n* Cross-check with the product description to ensure product accuracy.\n* Output a **new JSON prompt object**.\n\nOutput only valid JSON with no code fences, no explanations, no markdown.\n\n",
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        3504,
+        -144
+      ],
+      "id": "28bb7d54-1612-467a-b3c6-39de6087a1d0",
+      "name": "image prompt revision agent.",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "file": "=https://ucarecdn.com/{{ $json.file }}/-/preview/750x1000/",
+        "additionalFields": {
+          "caption": "Image 1"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2912,
+        80
+      ],
+      "id": "a83031ee-8a9f-4559-a441-eedc8acd0915",
+      "name": "send nano image",
+      "webhookId": "b15eec69-1a06-4a87-a8d8-9d479c2b4a5a",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "file": "=https://ucarecdn.com/{{ $json.file }}/-/preview/750x1000/",
+        "additionalFields": {
+          "caption": "Image 2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2912,
+        272
+      ],
+      "id": "54f23c92-e78f-4637-a951-8c41de7a3313",
+      "name": "send gpt image",
+      "webhookId": "b15eec69-1a06-4a87-a8d8-9d479c2b4a5a",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "body.candidates[0].content.parts[0].inlineData.data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        80
+      ],
+      "id": "fb6460f2-4524-4d83-8b92-48d80d37e9eb",
+      "name": "conver image from 64bit binary",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "=POST",
+        "url": "https://upload.uploadcare.com/base/",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "UPLOADCARE_PUB_KEY",
+              "value": "5fc968ac445cd957053f"
+            },
+            {
+              "name": "UPLOADCARE_STORE",
+              "value": "auto"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2672,
+        80
+      ],
+      "id": "e88040cd-5a88-4632-a257-aec02b90a521",
+      "name": "image 1 url"
+    },
+    {
+      "parameters": {
+        "method": "=POST",
+        "url": "https://upload.uploadcare.com/base/",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "UPLOADCARE_PUB_KEY",
+              "value": "5fc968ac445cd957053f"
+            },
+            {
+              "name": "UPLOADCARE_STORE",
+              "value": "auto"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2672,
+        272
+      ],
+      "id": "8a164fc7-6860-4d92-b2e5-99384fa95b7e",
+      "name": "image 2 url"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5067752f-59f9-476a-a071-33cd02467999",
+              "name": "image_url",
+              "value": "=https://ucarecdn.com/{{ $('image 2 url').last().json.file }}/file.jpeg",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        656
+      ],
+      "id": "12ba4ff2-68ec-45f3-b67d-c961b508ce91",
+      "name": "image 2 url set"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9f3cdcff-f17a-4672-8cf0-34abd881c494",
+              "name": "image_url",
+              "value": "=https://ucarecdn.com/{{ $('image 1 url').last().json.file }}/file.jpeg",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        528
+      ],
+      "id": "bd9c5b1a-4ce2-4b8f-82cd-2aff79aeb9da",
+      "name": "image 1 url set"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3.0-generate-001:predictLongRunning",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"instances\": [\n    {\n      \"prompt\": \"({{ $json.video_prompt.first_frame_reference }}{{ $json.video_prompt.transition_description }}{{ $json.video_prompt.camera_movement }}{{ $json.video_prompt.audio_design }})\",\n      \"image\": {\n        \"bytesBase64Encoded\": \"{{ $json.data }}\",\n        \"mimeType\": \"{{ $binary.data.mimeType }}\"\n      }\n    }\n  ],\n  \"parameters\": {\n    \"resolution\": \"1080p\",\n    \"negativePrompt\": \"{{ $json.video_prompt.negative_prompt }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1728,
+        640
+      ],
+      "id": "6567bfbf-a296-45ae-8e46-a3fcbf1dbc13",
+      "name": "veo ",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F1xmwX9FMr6uQXXb",
+          "name": "google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.image_url }}",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        992
+      ],
+      "id": "4789a7fa-648e-4933-b862-c028e083b0cf",
+      "name": "get image"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {
+          "encoding": "base64",
+          "keepSource": "both"
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        640
+      ],
+      "id": "06f646d3-faaa-4b5a-93d0-58298e39b2da",
+      "name": "convert to 64 bit"
+    },
+    {
+      "parameters": {
+        "url": "=https://generativelanguage.googleapis.com/v1beta/{{ $json.name }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        640
+      ],
+      "id": "3332bb58-8ce2-4283-a67b-ee35d31fbf74",
+      "name": "check if generation done",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F1xmwX9FMr6uQXXb",
+          "name": "google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response.generateVideoResponse.generatedSamples[0].video.uri }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2672,
+        624
+      ],
+      "id": "2934f7f9-642f-4035-b616-5bcbaf1d8a7c",
+      "name": "download video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F1xmwX9FMr6uQXXb",
+          "name": "google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2880,
+        624
+      ],
+      "id": "b51885ec-a4b5-4910-ab8d-64df6394680c",
+      "name": "Send a video",
+      "webhookId": "7e10a788-5a79-49c7-895e-1afb0982ff35",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the initial prompt:\n{{ $('set video prompts').last().json.video_prompt.model }}{{ $('set video prompts').last().json.video_prompt.first_frame_reference }}{{ $('set video prompts').last().json.video_prompt.transition_description }}{{ $('set video prompts').last().json.video_prompt.camera_movement }}{{ $('set video prompts').last().json.video_prompt.audio_design }}{{ $('set video prompts').last().json.video_prompt.negative_prompt }}\nAdditional comments:\n{{ $json.data.text }}\n\nProduct image link:\n{{ $('Merge1').last().json.image_url }}\n\nProduct description:\n{{ $('Analyze image').last().json.candidates[0].content.parts[0].text }}\n\nUse the think tool to double check your output",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=\n### **System Prompt: Adaptive Video Prompt Revision Agent (Image + Description Aware)**\n\nYou are an **Adaptive Video Prompt Revision Agent**.\nYour task: take in **(1) a product image link (first frame reference)**, **(2) a product description**, **(3) the previous video generation prompt**, and **(4) user feedback/recommendation (from one word to multiple paragraphs)**.\nOutput a **revised, production-ready video generation prompt** optimized for a model like Veo3.\n\n---\n\n#### **Your Mission**\n\n* Use the **product image** as the main source of truth for visuals.\n* Use the **product description** to enrich context (features, materials, colors, target vibe).\n* Analyze **user feedback** to fix problems or improve the video prompt — no matter how minimal or detailed.\n* Keep good elements from the **previous prompt** while revising weak or mismatched parts.\n* Produce a **single, clear, structured revised prompt** ready for direct use with a video generation model.\n\n---\n\n#### **Adaptive Interpretation Rules**\n\n1. **Image + Description Fusion**\n\n   * Always match the shape, material, logo placement, and features shown in the product image.\n   * Use the description for details not visible in the image (e.g., texture, function, target audience).\n   * Do not invent new features unless explicitly requested.\n\n2. **Feedback Parsing**\n\n   * For single words, infer probable intent (“blurry” → increase clarity).\n   * For phrases or paragraphs, extract key issues and apply changes (e.g., “earpods don’t go in case” → script them going into case).\n   * Combine compliments + critiques to produce balanced improvements.\n\n3. **Cinematography**\n\n   * Specify composition, lighting, color tone, camera movement, lens, and depth-of-field for premium look.\n   * Adapt the style to fit the product category (tech = sleek; cosmetics = soft and elegant; food = appetizing and warm).\n\n4. **Motion & Realism**\n\n   * Ensure natural easing, plausible physics, no jerky animation.\n   * Align product actions with feedback (open lid, rotate product, animate UI lights, etc.).\n\n5. **Audio Design**\n\n   * Keep sound minimal, premium, and in sync with visuals.\n   * If no audio instructions given, infer tasteful effects from context.\n\n6. **Technical & Negative Prompts**\n\n   * Include duration, resolution, physics\\_realism, and sync\\_audio.\n   * Always add a negative\\_prompt list to avoid artifacts (blurry frames, flicker, extra objects, inaccurate reflections, etc.).\n\n---\n\n#### **Output Format**\n\nOutput your revised prompt exactly like this with the text in JSON:\n\n```\nvideo_prompt:\nmodel: veo3\nproduct_image_link: [URL to the product image]\nproduct_description: [short condensed description if needed]\nfirst_frame_reference: [description or URL of first frame/product image]\ntransition_description: [describe the new motion/sequence according to feedback and inferred improvements]\ncamera_movement: [describe camera moves/angles/lenses]\naudio_design: [describe soundscape/SFX, inferred if missing]\nduration_seconds: [integer or inferred]\nresolution: [e.g. 1080p]\nphysics_realism: [true/false]\nsync_audio: [true/false]\nnegative_prompt: [list issues to avoid]\n```\n\n---\n\n#### **Core Behavior**\n\n* **Short feedback** → infer and apply improvements.\n* **Long feedback** → extract actionable items, fix weaknesses, preserve good aspects.\n* **No feedback** → enhance original prompt using best practices for high-end product videos.\n* Always output a **cohesive, cinematic, and realistic prompt** that mirrors the product image and description.\n\n---\n\n#### **Your Goal**\n\nProduce **polished, high-end product video prompts** consistently across categories — from tech to fashion to industrial products — using the **image + description + feedback** to deliver a clear creative brief every time.\n\nOutput only valid JSON with no code fences, no explanations, no markdown.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        992
+      ],
+      "id": "56cf738c-e17a-4f4d-9620-9948ab643550",
+      "name": "video prompt revison agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f491da97-8fe4-49f5-95f1-609f0eeeee37",
+              "name": "video_prompt",
+              "value": "={{ $json.output.video_prompt }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        1008
+      ],
+      "id": "2a59c284-f3ab-40e9-af33-cb4ccc64665e",
+      "name": "set video prompts",
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "09c1bc2c-7138-4661-a9e5-3481728d07de",
+              "leftValue": "={{ $json.done }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        640
+      ],
+      "id": "1f8c1648-d15e-4049-915e-ab79da4ca5e0",
+      "name": "if generation is done"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "message": "Confirm video.",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 45,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3088,
+        624
+      ],
+      "id": "c70e54d2-7e6e-428c-b070-0d16f2e82ec3",
+      "name": "ask user to approve or decline",
+      "webhookId": "a2d51f15-a207-4633-822d-1b5d92e462eb",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d649c703-380d-4913-8278-2cd813f9e339",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3312,
+        624
+      ],
+      "id": "ccf03e80-7550-4c29-88b7-4bdb07fb8588",
+      "name": "if usr declilnes regenerate and loop"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "message": "suggest improvements",
+        "responseType": "freeText",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 45,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3312,
+        864
+      ],
+      "id": "dedb6dfb-0aff-4177-80d7-2cef77bd6e7a",
+      "name": "get user feedback",
+      "webhookId": "44fa95e4-85d8-4fdf-ae23-d07a45001f01",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function node\n// Input: the data you pasted\n// Output: { uuids: [...] }\n\nconst output = [];\nconst item = items[0]; // n8n always gives items array\n// Step 1: Parse the stringified JSON in data\nconst jsonData = JSON.parse(item.json.data);\n\n// Step 2: Collect uuids from results array\nconst uuids = jsonData.results.map(r => r.uuid);\n\n// Step 3: Return in your desired format\nreturn [{\n  json: {\n    uuids\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3584,
+        736
+      ],
+      "id": "3fe70c01-d0f1-43bd-a818-2b3677b49db8",
+      "name": "extract uuids"
+    },
+    {
+      "parameters": {
+        "url": "https://api.uploadcare.com/files/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.uploadcare-v0.7+json"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3584,
+        608
+      ],
+      "id": "501d295c-6103-4450-9902-14339b195d7c",
+      "name": "get all uploaded files",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uourcpt4tn2PivGH",
+          "name": "uploadcare"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "https://api.uploadcare.com/files/storage/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.uploadcare-v0.7+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.uuids }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3584,
+        864
+      ],
+      "id": "dfe83f41-8bf4-4df6-9dba-560855fac687",
+      "name": "delete files",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uourcpt4tn2PivGH",
+          "name": "uploadcare"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# delete uploads\n",
+        "height": 720,
+        "width": 304,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3488,
+        464
+      ],
+      "typeVersion": 1,
+      "id": "cddebe1d-72db-45ba-ab61-80cb4e039108",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "# Video generation loop",
+        "height": 720,
+        "width": 2560,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1104,
+        464
+      ],
+      "typeVersion": 1,
+      "id": "8de0d073-847d-4915-9c66-64344e69c735",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "# image generaton loop\n",
+        "height": 480,
+        "width": 2688,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1104,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "1a2b79aa-4c14-437d-87bb-29ad861eec43",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "# prompt generation and revision ",
+        "height": 224,
+        "width": 2688,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1104,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "ee4265a8-84fd-4a4d-a383-02391f44d61f",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "# input and analysis",
+        "height": 576,
+        "width": 896,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        208,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "a7ad841d-cdc6-40c9-ac1b-d9acdb8cae3b",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1328,
+        992
+      ],
+      "id": "4e578319-0bda-4ea6-82dd-188e1642f0e4",
+      "name": "Merge1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "Video is generating. This cna take up to 5 minutes.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        656
+      ],
+      "id": "63dc9eb6-6458-41b6-b9d8-9094b93728be",
+      "name": "vid gen notif1",
+      "webhookId": "0081fc27-8a07-4799-a24b-d20bc8920918",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "Video is generating. This can take up to 5 minutes.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        528
+      ],
+      "id": "a72fcfa2-7611-4080-8df4-92725b2db273",
+      "name": "vid gen notif2",
+      "webhookId": "0081fc27-8a07-4799-a24b-d20bc8920918",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "Regenerating prompts, this may take some time. Check back to approve prompts",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3296,
+        80
+      ],
+      "id": "fa8e8e11-9623-42d9-b45d-92cf79d9fa3d",
+      "name": "regenerating image",
+      "webhookId": "6f6ad768-a4a5-4031-bc91-50ab4b2b6dab",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.candidates[0].content.parts[0].text }}",
+        "destinationKey": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        -144
+      ],
+      "id": "fd5a15d7-c7fe-4f25-b57e-a3ddee4e23fd",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "All done. Send an image to restart the bot.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3584,
+        992
+      ],
+      "id": "e31cd60e-4093-49ff-89b8-432f089f8c9f",
+      "name": "Send a text message2",
+      "webhookId": "753d4341-e85a-41e6-baa5-fb996a801272",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Activate on message to bot').last().json.message.chat.id }}",
+        "text": "Regenerating prompts, this may take some time. Check back to approve prompts",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3312,
+        992
+      ],
+      "id": "1f8d5f41-ff4b-44cd-8663-a8e687b1a569",
+      "name": "regenerating video",
+      "webhookId": "6f6ad768-a4a5-4031-bc91-50ab4b2b6dab",
+      "credentials": {
+        "telegramApi": {
+          "id": "4NwWzl6WWvczICX1",
+          "name": "Vidgen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5067752f-59f9-476a-a071-33cd02467999",
+              "name": "image_url",
+              "value": "={{ $('Merge1').last().json.image_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        784
+      ],
+      "id": "8cd95673-1090-47d7-b69b-a24a5ac1e9a3",
+      "name": "image url pull"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1390ab79-4c50-404e-a48f-1700d48ff9d9",
+              "leftValue": "={{ $json.body.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        64
+      ],
+      "id": "2cf9ada5-c3a0-434b-9af4-b1b2498fa9fe",
+      "name": "if there is an error"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2544,
+        992
+      ],
+      "id": "c12cc700-aba6-46e6-af9f-79cf05f6c13c",
+      "name": "wait 60",
+      "webhookId": "a9b3f9c0-07be-4ed5-bf53-52509e8df472"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "005dcd43-defc-4855-a450-f5e34310322c",
+              "leftValue": "={{ $json.message.photo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        -128
+      ],
+      "id": "c9a781b6-be72-4e99-866a-1726dc3818a6",
+      "name": "check if the message contains a photo"
+    },
+    {
+      "parameters": {
+        "amount": 200
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        640
+      ],
+      "id": "471a63c1-10b6-4c1b-9d64-492c5d91b4ed",
+      "name": "wait 200",
+      "webhookId": "404688d7-0e43-49a1-9200-2a44229b7c8e"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "*"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        -128
+      ],
+      "id": "e4a7c458-4141-4592-b69f-248410123f04",
+      "name": "Telegram Trigger",
+      "webhookId": "83fb1ef7-2364-40c2-aae3-9548345f9d03",
+      "credentials": {
+        "telegramApi": {
+          "id": "cPePCXorhltdmoRR",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Merge": [
+      {
+        "json": {
+          "ok": true,
+          "result": {
+            "message_id": 361,
+            "from": {
+              "id": 7295065325,
+              "is_bot": true,
+              "first_name": "vidgen",
+              "username": "adaividbot"
+            },
+            "chat": {
+              "id": 6132889848,
+              "first_name": "Rammah",
+              "type": "private"
+            },
+            "date": 1757758371,
+            "photo": [
+              {
+                "file_id": "AgACAgQAAxkDAAIBaWjFQ6Niepo7TWkxbVM1lwn8PeFdAAIKuzEbhcMsUqepR1fhVUTtAQADAgADcwADNgQ",
+                "file_unique_id": "AQADCrsxG4XDLFJ4",
+                "file_size": 761,
+                "width": 66,
+                "height": 90
+              },
+              {
+                "file_id": "AgACAgQAAxkDAAIBaWjFQ6Niepo7TWkxbVM1lwn8PeFdAAIKuzEbhcMsUqepR1fhVUTtAQADAgADbQADNgQ",
+                "file_unique_id": "AQADCrsxG4XDLFJy",
+                "file_size": 6175,
+                "width": 234,
+                "height": 320
+              },
+              {
+                "file_id": "AgACAgQAAxkDAAIBaWjFQ6Niepo7TWkxbVM1lwn8PeFdAAIKuzEbhcMsUqepR1fhVUTtAQADAgADeQADNgQ",
+                "file_unique_id": "AQADCrsxG4XDLFJ-",
+                "file_size": 23718,
+                "width": 730,
+                "height": 1000
+              },
+              {
+                "file_id": "AgACAgQAAxkDAAIBaWjFQ6Niepo7TWkxbVM1lwn8PeFdAAIKuzEbhcMsUqepR1fhVUTtAQADAgADeAADNgQ",
+                "file_unique_id": "AQADCrsxG4XDLFJ9",
+                "file_size": 25291,
+                "width": 584,
+                "height": 800
+              }
+            ],
+            "caption": "Image 1"
+          }
+        }
+      },
+      {
+        "json": {
+          "ok": true,
+          "result": {
+            "message_id": 362,
+            "from": {
+              "id": 7295065325,
+              "is_bot": true,
+              "first_name": "vidgen",
+              "username": "adaividbot"
+            },
+            "chat": {
+              "id": 6132889848,
+              "first_name": "Rammah",
+              "type": "private"
+            },
+            "date": 1757758437,
+            "photo": [
+              {
+                "file_id": "AgACAgQAAxkDAAIBamjFQ-Us1GcLYweWtOUI9ghzLl2uAAKEuzEbFywsUgVESRCcK5-kAQADAgADcwADNgQ",
+                "file_unique_id": "AQADhLsxGxcsLFJ4",
+                "file_size": 922,
+                "width": 90,
+                "height": 90
+              },
+              {
+                "file_id": "AgACAgQAAxkDAAIBamjFQ-Us1GcLYweWtOUI9ghzLl2uAAKEuzEbFywsUgVESRCcK5-kAQADAgADbQADNgQ",
+                "file_unique_id": "AQADhLsxGxcsLFJy",
+                "file_size": 8055,
+                "width": 320,
+                "height": 320
+              },
+              {
+                "file_id": "AgACAgQAAxkDAAIBamjFQ-Us1GcLYweWtOUI9ghzLl2uAAKEuzEbFywsUgVESRCcK5-kAQADAgADeAADNgQ",
+                "file_unique_id": "AQADhLsxGxcsLFJ9",
+                "file_size": 33244,
+                "width": 750,
+                "height": 750
+              }
+            ],
+            "caption": "Image 2"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "send file upload prompt": {
+      "main": [
+        []
+      ]
+    },
+    "get largest image id": {
+      "main": [
+        [
+          {
+            "node": "get image path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get image path": {
+      "main": [
+        [
+          {
+            "node": "download binary image from telegram servers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download binary image from telegram servers": {
+      "main": [
+        [
+          {
+            "node": "upload to a public url(uploadcare)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload to a public url(uploadcare)": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Initial prompt agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "video prompt revison agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Prompt revision agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "image prompt revision agent.",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "Initial prompt agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Prompt revision agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "image prompt revision agent.",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "video prompt revison agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Prompt revision agent",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "image prompt revision agent.",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "video prompt revison agent",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "Initial prompt agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set prompts": {
+      "main": [
+        [
+          {
+            "node": "get approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get approval": {
+      "main": [
+        [
+          {
+            "node": "Approved or not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Initial prompt agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved or not": {
+      "main": [
+        [
+          {
+            "node": "in progress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Waiting text message.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initial prompt agent": {
+      "main": [
+        [
+          {
+            "node": "set video prompts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt revision agent": {
+      "main": [
+        [
+          {
+            "node": "Set prompts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "set video prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Waiting text message.": {
+      "main": [
+        [
+          {
+            "node": "Prompt revision agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "in progress": {
+      "main": [
+        [
+          {
+            "node": "download binary image from telegram servers2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download binary image from telegram servers2": {
+      "main": [
+        [
+          {
+            "node": "convert file mime-type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "generate image(nano banana)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate image(nano banana)": {
+      "main": [
+        [
+          {
+            "node": "if there is an error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image1": {
+      "main": [
+        []
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "image 2 url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message1": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "convert file mime-type": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "generate image (gpt api)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate image (gpt api)": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "get way forward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "regenerating image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "vid gen notif2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "vid gen notif1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get way forward": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send analysis": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image prompt revision agent.": {
+      "main": [
+        [
+          {
+            "node": "Set prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send nano image": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send gpt image": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "conver image from 64bit binary": {
+      "main": [
+        [
+          {
+            "node": "image 1 url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image 1 url": {
+      "main": [
+        [
+          {
+            "node": "send nano image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image 2 url": {
+      "main": [
+        [
+          {
+            "node": "send gpt image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image 1 url set": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image 2 url set": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get image": {
+      "main": [
+        [
+          {
+            "node": "convert to 64 bit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "veo ": {
+      "main": [
+        [
+          {
+            "node": "wait 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "convert to 64 bit": {
+      "main": [
+        [
+          {
+            "node": "veo ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check if generation done": {
+      "main": [
+        [
+          {
+            "node": "if generation is done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download video": {
+      "main": [
+        [
+          {
+            "node": "Send a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a video": {
+      "main": [
+        [
+          {
+            "node": "ask user to approve or decline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set video prompts": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "video prompt revison agent": {
+      "main": [
+        [
+          {
+            "node": "set video prompts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "image url pull",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if generation is done": {
+      "main": [
+        [
+          {
+            "node": "download video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "wait 60",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ask user to approve or decline": {
+      "main": [
+        [
+          {
+            "node": "if usr declilnes regenerate and loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if usr declilnes regenerate and loop": {
+      "main": [
+        [
+          {
+            "node": "get all uploaded files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "get user feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get user feedback": {
+      "main": [
+        [
+          {
+            "node": "regenerating video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract uuids": {
+      "main": [
+        [
+          {
+            "node": "delete files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get all uploaded files": {
+      "main": [
+        [
+          {
+            "node": "extract uuids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "delete files": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "get image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "vid gen notif2": {
+      "main": [
+        [
+          {
+            "node": "image 1 url set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "vid gen notif1": {
+      "main": [
+        [
+          {
+            "node": "image 2 url set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "regenerating image": {
+      "main": [
+        [
+          {
+            "node": "image prompt revision agent.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "send analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "regenerating video": {
+      "main": [
+        [
+          {
+            "node": "video prompt revison agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image url pull": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if there is an error": {
+      "main": [
+        [
+          {
+            "node": "in progress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "conver image from 64bit binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait 60": {
+      "main": [
+        [
+          {
+            "node": "check if generation done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check if the message contains a photo": {
+      "main": [
+        [
+          {
+            "node": "get largest image id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send file upload prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait 200": {
+      "main": [
+        [
+          {
+            "node": "check if generation done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "check if the message contains a photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Nairobi",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 3600,
+    "errorWorkflow": "LjTBTrGshawxqULB",
+    "timeSavedPerExecution": 10
+  },
+  "versionId": "194cfa3c-b94c-4fab-b220-4d26653617e2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ae0fe55fe9d5da9736e3fe86c88b22ef33b05a7c2f467ec295ba29ae41e27f1"
+  },
+  "id": "VI5cx0DA8kHaw9Nc",
+  "tags": []
+}

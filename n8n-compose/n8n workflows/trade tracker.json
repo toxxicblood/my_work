@@ -1,0 +1,496 @@
+{
+  "name": "trade tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.twelvedata.com/price?symbol=XAU/USD&apikey=239220599e224f5ba72ba131bb6c86d2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        -224
+      ],
+      "id": "f2a5aac3-3689-4d17-8523-d2ba3cef98c8",
+      "name": "current price",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "function getPreviousTradingDay(date) {\n  const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday\n  const newDate = new Date(date);\n\n  if (day === 0) {\n    // Sunday → go back to Friday\n    newDate.setDate(date.getDate() - 2);\n  } else if (day === 1) {\n    // Monday → go back to Friday\n    newDate.setDate(date.getDate() - 3);\n  } else {\n    // Any other weekday → go back one day\n    newDate.setDate(date.getDate() - 1);\n  }\n\n  return newDate.toISOString().split(\"T\")[0];\n}\n\nfunction getTodayTradingDay(date) {\n  const day = date.getDay();\n  if (day === 0 || day === 6) {\n    return null; // Not a trading day\n  }\n  return date.toISOString().split(\"T\")[0];\n}\n\n// Get dates\nconst today = new Date();\nconst todayTradingDay = getTodayTradingDay(today);\nconst previousTradingDay = getPreviousTradingDay(today);\n\n// Output\nreturn [\n  {\n    json: {\n      today_trading_day: todayTradingDay,\n      previous_trading_day: previousTradingDay\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -128
+      ],
+      "id": "54fb26a5-4821-44eb-881f-d048f527f646",
+      "name": "Code4"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ",
+          "mode": "list",
+          "cachedResultName": "Trade Agent",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "date_time",
+              "lookupValue": "={{ $json.previous_trading_day }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        640,
+        -16
+      ],
+      "id": "f6a62d84-4888-48f2-8e83-717468cca6a6",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        208,
+        -128
+      ],
+      "id": "e2aa300e-9030-415d-a488-73047deeeef4",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        864,
+        -128
+      ],
+      "id": "25688307-8c27-491d-a0e0-e7d456d7d2c0",
+      "name": "Merge",
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.result }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a professional trading analyst AI. Based on the input JSON object representing a trade and the current market price, analyze and determine the following:\n\n1. **trade_status**:  \n   - \"pending\" if the current price has not reached the entry level yet.  \n   - \"on\" if the current price has reached or passed the entry level but hasn't yet hit the stop loss or take profit.  \n   - \"closed\" if the trade has hit either stop loss or take profit.\n\n2. **trade_end**:  \n   - \"tp\" if price reached or exceeded the take profit level.  \n   - \"sl\" if price fell to or below the stop loss level.  \n   - Leave blank if trade is still \"on\" or \"pending\".\n\n3. **profit_loss**:  \n   - Calculate the profit or loss in USD based on the price movement from entry to current price, stop loss, or take profit.\n   - Use the leverage and account balance if necessary for assumptions.\n\n4. **amount_risked**:  \n   - Calculate the risk in USD based on the distance between entry and stop loss.\n\n5. **rr** (Risk to Reward ratio):  \n   - Calculate as:  \n     \\[\n     \\text{RR} = \\frac{\\text{Take Profit - Entry}}{\\text{Entry - Stop Loss}}\n     \\]\n     For BUY trades  \n     (invert for SELL)\n\n6. Always assume the trade was placed at the `entry` price on the `date_time`.\n\nReturn a JSON object with the following required fields filled:\n- trade_status\n- trade_end\n- profit_loss\n- amount_risked\n- rr\n\nEnsure all outputs are numbers with two decimal places, except for status values.\n\nUse this JSON input as your output format reference:\n{\n\"price\": \n\"3363.19\",\n\"row_number\": \n2,\n\"symbol\": \n\"XAU/USD\",\n\"date_time\": \n\"2025-08-01\",\n\"action\": \n\"BUY\",\n\"entry\": \n3366.5,\n\"stop_loss\": \n3360.5,\n\"take_profit\": \n3380,\n\"position_size\": \n\"Determine based on 1% risk rule\",\n\"confidence\": \n\"High\",\n\"timeframe\": \n\"M15\",\n\"trade_status\": \n\"\",\n\"trade_end\": \n\"\",\n\"acct_balance\": \n491.18,\n\"Leverage\": \n\"1:15\",\n\"profit_loss\": \n\"\",\n\"ammt_risked\": \n\"\",\n\"rr\": \n\"\",\n\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -128
+      ],
+      "id": "ea11c9d6-7767-4a88-bf37-e304b004cc07",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = {};\n\nfor (const item of items) {\n  Object.assign(result, item.json);\n}\n\nreturn [\n  {\n    json: {\n      result\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        -128
+      ],
+      "id": "c90beae2-c327-4534-9496-545ee4b6c446",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        112
+      ],
+      "id": "94564b4a-e259-4827-8170-7805db3e8cfd",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\"price\": \n\"3363.19\",\n\"row_number\": \n2,\n\"symbol\": \n\"XAU/USD\",\n\"date_time\": \n\"2025-08-01\",\n\"action\": \n\"BUY\",\n\"entry\": \n3366.5,\n\"stop_loss\": \n3360.5,\n\"take_profit\": \n3380,\n\"position_size\": \n\"Determine based on 1% risk rule\",\n\"confidence\": \n\"High\",\n\"timeframe\": \n\"M15\",\n\"trade_status\": \n\"\",\n\"trade_end\": \n\"\",\n\"acct_balance\": \n491.18,\n\"Leverage\": \n\"1:15\",\n\"profit_loss\": \n\"\",\n\"ammt_risked\": \n\"\",\n\"rr\": \n\"\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1440,
+        112
+      ],
+      "id": "54253d8b-f81a-467f-92be-eceb7ce411e9",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ",
+          "mode": "list",
+          "cachedResultName": "Trade Agent",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zdbCTv0mx_c5v_FTaMT2rQ7NHXMaempnUbHf0-wbVyQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date_time": "={{ $json.output.date_time }}",
+            "symbol": "={{ $json.output.symbol }}",
+            "action": "={{ $json.output.action }}",
+            "entry": "={{ $json.output.entry }}",
+            "stop_loss": "={{ $json.output.stop_loss }}",
+            "take_profit": "={{ $json.output.take_profit }}",
+            "position_size": "={{ $json.output.position_size }}",
+            "confidence": "={{ $json.output.confidence }}",
+            "timeframe": "={{ $json.output.timeframe }}",
+            "trade_status": "={{ $json.output.trade_status }}",
+            "trade_end": "={{ $json.output.trade_end }}",
+            "acct_balance": "={{ $json.output.acct_balance }}",
+            "Leverage": "={{ $json.output.Leverage }}",
+            "profit_loss": "={{ $json.output.profit_loss }}"
+          },
+          "matchingColumns": [
+            "date_time"
+          ],
+          "schema": [
+            {
+              "id": "symbol",
+              "displayName": "symbol",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date_time",
+              "displayName": "date_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "entry",
+              "displayName": "entry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stop_loss",
+              "displayName": "stop_loss",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "take_profit",
+              "displayName": "take_profit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "position_size",
+              "displayName": "position_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timeframe",
+              "displayName": "timeframe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trade_status",
+              "displayName": "trade_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trade_end",
+              "displayName": "trade_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "acct_balance",
+              "displayName": "acct_balance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Leverage",
+              "displayName": "Leverage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "profit_loss",
+              "displayName": "profit_loss",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ammt_risked",
+              "displayName": "ammt_risked",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rr",
+              "displayName": "rr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "output",
+              "displayName": "output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1664,
+        -128
+      ],
+      "id": "6ec87bf0-f2ee-4e82-ab90-abf5497d6fdf",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "current price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "current price": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "54f382af-f310-4a69-ba41-9ea6badd2fca",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf2dbac7946681ca7b3e10e8d83af81b6883302b18f614a88ca86b6b9d7f56ec"
+  },
+  "id": "UjdR2aGR0IsIQgae",
+  "tags": []
+}

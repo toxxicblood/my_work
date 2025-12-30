@@ -1,0 +1,5 @@
+# Ignore local environment files
+n8n.env
+
+# Ignore local certificates
+certs/

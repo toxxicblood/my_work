@@ -1,0 +1,487 @@
+{
+  "name": "Evaluator-Optimizer",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Text translator",
+        "formDescription": "Enter your text to get an accurate translation.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Text",
+              "placeholder": "Text to translate",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "TargetLanguage",
+              "placeholder": "Target  Language for translation",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -96
+      ],
+      "id": "39914403-4098-49f5-834c-4c4f9294fd87",
+      "name": "Translation form",
+      "webhookId": "60d081d0-d62b-4b08-b47f-14db63e34400"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "df0c5dfe-c826-4df1-9bc3-64517b21cdb8",
+              "name": "iteration ",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "db96b722-550a-4509-a68f-7ebc174c5823",
+              "name": "sourcetext",
+              "value": "={{ $json.Text }}",
+              "type": "string"
+            },
+            {
+              "id": "d66c6d2a-5fb1-4401-a0eb-7f431e2498d9",
+              "name": "targetlang",
+              "value": "={{ $json.TargetLanguage }}",
+              "type": "string"
+            },
+            {
+              "id": "69c0eca3-2b75-4fc6-a94a-7349790994cd",
+              "name": "bestTranslation",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "13e19d40-27db-4344-832a-1be5234e04df",
+              "name": "feedbackSummary",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "e9e34651-89da-4f45-aa5e-b9f5321ba4ae",
+              "name": "feedbackList",
+              "value": "=[]",
+              "type": "array"
+            },
+            {
+              "id": "1f274038-6094-4b13-9e97-18f94367d453",
+              "name": "bestScore",
+              "value": 0,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "a43910d5-4d97-4929-947a-931ee14b2491",
+      "name": "Initialize State"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        752,
+        0
+      ],
+      "id": "5f30da04-85c6-4745-809f-2bb0e9e754c4",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "/*\n* Build Generator/optimizer Prompt\n* mode: runOnceForEachItem\n* Works for iteration 0 (first draft) and >= 1 (optimize using feedback)\n*/\n\nconst {\n  iteration = 0,\n  sourcetext = '',\n  targetlang = '',\n  bestTranslation = '',\n  feedbackSummary = '',\n  feedbackList = [],\n} = $json;\n\n// bullet-point block for later iterations \nconst bulletBlock = Array.isArray(feedbackList) && feedbackList.length\n  ? feedbackList.map(t => `- ${t}`).join('\\n')\n  : '- (no detailed feedback yet)';\n\nlet prompt;\n\n/* -------------BRANCH A: first ever pass ------------*/ \nif (iteration === 0) {\n  prompt = `You are **Translation-Writer-v1** - a professional translator.\n\n=*****************************\nINPUT\n- source_text: ${sourcetext}\n- target_language: ${targetlang}\n******************************\n\nTASK\n1. Produce a **fluent, idiomatic translation** of source_text into target_language.\n2. **Preserve meaning** precisely - no omissions or additions.\n3. Mirror the **tone & register** of the original text.\n4. Adapt cultural references naturally or clarify if needed.\n5. Length <= 120% of the source\n6. Output **only** the translated text - no explanations.\n\nBegin your translation now.`;\n}  \n\n/* -------------BRANCH B: optimization rounds ----------*/\nelse {\n  prompt = `You are **Translation-Writer-v1** - a professional translator improving a draft.\n\n**********************************\nINPUT\n- source_text: ${sourcetext}\n- target_language: ${targetlang}\n- previous_translation: ${bestTranslation}\n- evaluator_feedback: ${feedbackSummary}\n\nExtra feedback list:\n${bulletBlock}\n*********************************\n\nTASK\nApply the feedback to deliver a better translation while following the same rules.\nReturn **only** the updated translation.`;\n}\n\n// Return as a FunctionItem output\nreturn { ...$json, prompt };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "43531f0e-1a90-4724-8fe9-72e361a98210",
+      "name": "build generator/ optimizer prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        672,
+        -224
+      ],
+      "id": "afb9102f-bbb1-4233-9c20-59dc1c198663",
+      "name": "Generator/Optimizer"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9cd95169-1df9-4a52-9c8e-5b10aed5694f",
+              "name": "sourcetext",
+              "value": "={{ $('build generator/ optimizer prompt').item.json.sourcetext }}",
+              "type": "string"
+            },
+            {
+              "id": "9d7b41a7-24c8-4cb5-a4f6-e0f80a21f4b1",
+              "name": "targetLang",
+              "value": "={{ $('build generator/ optimizer prompt').item.json.targetlang }}",
+              "type": "string"
+            },
+            {
+              "id": "c0fc97af-aa32-4c8d-972b-c4e792121384",
+              "name": "currentTranslation",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        -224
+      ],
+      "id": "ff4b9abc-2daf-4d72-82cd-8857ea8a4370",
+      "name": "set variables for evaluator prompt Builder"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { sourcetext, targetLang, currentTranslation } = $json;\n\nconst prompt = `You are a **Translation-Quality-Evaluator**.\nYour goal is to judge a machine-generated translation against the rubric below and return a structured JSON report.\n    \n******************\nINPUTS\n  - source_text: ${sourcetext}\n  - candidate_translation: ${currentTranslation}\n  - target_language: ${targetLang}\n******************\n\nRUBRIC (each-category 0-100; higher = better)\n\n1. Accuracy (Adequacy/Fidelity) - Does the meaning match the source exactly?\n2. Fluency - Is the translation grammatical and natural for a native speaker?\n3. Cultural & stylistic Appropriateness - Are idioms, tone and register correct for the target audience and context?\n4. Instruction-Following - Does the translation obey any style/length/format constraints provided?\n\nAggregate the sub-scores into **overall_score** (weighted: Accuracy 40%, Fluency 30%, Culture 20%, Instructions 10%).\nSet **pass** to true when overall_score >= 90.\n\n***********************\nOUTPUT FORMAT (STRICT JSON)\n\n{\n  \"pass\": true or false,\n  \"overall_score\": 0–100,\n  \"scores\": {\n    \"accuracy\": 0–100,\n    \"fluency\": 0–100,\n    \"culture\": 0–100,\n    \"instructions\": 0–100\n  },\n  \"feedback\": {\n    \"summary\": \"One-sentence headline about the translation quality\",\n    \"detail\": [\n      \"Concrete, numbered suggestions for improvement — max 4 items\"\n    ]\n  }\n}\n\nRules:\n  * Produce only valid JSON — no code fences, comments, or extra keys.\n  * Feedback must be actionable (e.g., \"Replace literal word-order with natural target-language syntax\", not \"bad translation\").\n  * Never rewrite the translation yourself; critique only.\n  * If overall_score < 90, 'pass' **must** be false.\n\nEnd of prompt.`;\n\nreturn { prompt };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -224
+      ],
+      "id": "ecbe9baf-07d5-4e74-91af-7663f23108dc",
+      "name": "Build evaluator prompt"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-06-05",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "0cccadf4-9639-4cde-9eab-4af170681d4a",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YFMaINLzsHfIWlcU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"pass\": true,\n  \"overall_score\": 50,\n  \"scores\": {\n    \"accuracy\": 50,\n    \"fluency\": 50,\n    \"culture\": 50,\n    \"instructions\": 50\n  },\n  \"feedback\": {\n    \"summary\": \"One-sentence headline about the translation quality\",\n    \"detail\": [\n      \"Concrete, numbered suggestions for improvement — max 4 items\"\n    ]\n  }\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "f059ef31-35b5-4c93-adba-a434bfc48cc2",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        -224
+      ],
+      "id": "c6f96bee-42c7-443b-84d4-221fcde4dec7",
+      "name": "Evaluator"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ------- Update State --------\nconst {\n  \n  iteration  = $('build generator/ optimizer prompt').item.json[\"iteration \"],\n  bestScore = $('build generator/ optimizer prompt').item.json.bestScore,\n  bestTranslation = $('build generator/ optimizer prompt').item.json.bestTranslation,\n  sourcetext = $('build generator/ optimizer prompt').item.json.sourcetext,\n  targetlang = $('build generator/ optimizer prompt').item.json.targetlang,\n  overallScore = $json.output.overall_score,\n  pass = $json.output.pass,\n  feedbackSummary = $json.output.feedback.summary,\n  feedbackList = $json.output.feedback.detail,\n  currentTranslation = $('Generator/Optimizer').item.json.text\n} = $json;\n\n// Decide if this round is better\nconst isBetter = overallScore > bestScore;\n\nreturn {\n  iteration: iteration + 1,\n  bestScore: isBetter ? overallScore : bestScore,\n  bestTranslation: isBetter ? currentTranslation : bestTranslation,\n  pass,\n  sourcetext,\n  targetlang,\n  currentTranslation,\n  feedbackSummary,\n  feedbackList, // accumulate\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        -224
+      ],
+      "id": "cd6f61e4-262f-495c-941b-b2a63bbcd298",
+      "name": "update state"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1f69c09e-f4c9-4c3f-9264-c723697d5854",
+              "leftValue": "={{ $json.iteration }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "204b0305-4dc6-4284-98c8-55556741e779",
+              "leftValue": "={{ $json.pass }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2048,
+        -96
+      ],
+      "id": "ef97e028-017a-41be-b254-a49e719a5405",
+      "name": "Check for pass/max iterations"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e215b75a-2652-4b0b-9a50-166942674690",
+              "name": "translation",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2272,
+        -96
+      ],
+      "id": "949080cc-84fb-447d-9941-71d5c218e6ad",
+      "name": "Output translation"
+    }
+  ],
+  "pinData": {
+    "Translation form": [
+      {
+        "json": {
+          "Text": "“Maisha ya Mtaa: Vile Gava Haiwezi Cheza Hapa”  Aje wasee, hapa mtaa si place ya ma-softie. Ukiringa sana, life itakukata kama ya msee alidunda na mabeshte wa Gaza. Mtaa ni jungle — na si ile ya Lion King, ni ile unaskia mtu amepotea tu juu alichoma loyalty. Huku, loyalty ni currency. Hata cash ni secondary. Ukipima wasee na pesa tu, utapotea faster than bundles za free mode.  Jana kwa base, tulikuwa na ma-O.G. kina Smatta, Blackie na ule msee wa 69 Ghetto. Walikuwa wanadiscuss vile streets zimechange. Saa hii kila mtoi ako na phone, anapost TikTok akidai ako kwa grind. Lakini ile real hustle iko underground — place ya “hakuna evidence”, na ukianguka hakuna sequel. Mtaa haina retries, bro. Ni one life, one bullet, one blada.  Smatta alisema \"life ni chess, sio drafti\", na kila move inakua calculated. Huwezi kucheza na feelings hapa. Dems saa hii ni ma-investors wa emotions — ukiwa na form, wanaweka shares; ukianguka, wanawithdraw dividend na wanaleave WhatsApp group bila explanation. Love ya mtaa iko coded — inakuja na heartbreak as a clause, na tears as terms and conditions.  Na hizo ma-politiko za gava? Acha tu. Wanacome na promises za utopiatown, lakini ground ni different. Mtaa iko na floods, lack ya maji, na vijana wako idle hadi wanaresearch ma-scam techniques na AI prompts. Juzi dem flani alifanya Tinder hustle akaachia msee bill ya KSh 14K. Hii si love — ni survival ya street-savvy.  Na Gava? Wanasema youth empowerment lakini wanarun policies za fossil age. Youth wanapewa wheelbarrow lakini wanadream na Tesla. Manze hii gap ya mindset ni kali kuliko Rift Valley. Hadi wale ma-Otto hawacheki na hio script tena — wanachapa extortion kama ni side hustle. Hapa msee anaweza buy freedom kama ako na 2K ya haraka.  Wasee wengine wameenda crypto, wengine wanafanya art kwa maboma, na wengine bado wako kwa piracy ya Netflix movies. Hii life ni roulette — ukidunda round moja, unasema God atasaidia. Lakini God pia anajua unacheat system. So ananyamaza tu, anakuwatch kama spectator.  Lakini pia kuna light. Kuna ma-youth wanashika camera, wanacreate content, wanaeducate mtaa juu ya mental health, juu ya GBV, juu ya consent. Wasee wa mtaa si wasee wa violence pekee — ni wasee wa resilience, wasee wa hustle na wasee wa hope.  In the end, life ya mtaa ni exam bila marking scheme. Unaandika essay na God anadecide marks. Ukiwa loyal, unakam out kama O.G., ukiwa clown, utasahaulika kama meme ya 2016. So cheza chini, keep circle tight, na usiwai forget: mtaa ina rules zake, na hio game si ya kila mtu.",
+          "TargetLanguage": "German",
+          "submittedAt": "2025-07-17T20:55:51.603+03:00",
+          "formMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Translation form": {
+      "main": [
+        [
+          {
+            "node": "Initialize State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize State": {
+      "main": [
+        [
+          {
+            "node": "build generator/ optimizer prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generator/Optimizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "build generator/ optimizer prompt": {
+      "main": [
+        [
+          {
+            "node": "Generator/Optimizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generator/Optimizer": {
+      "main": [
+        [
+          {
+            "node": "set variables for evaluator prompt Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set variables for evaluator prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "Build evaluator prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build evaluator prompt": {
+      "main": [
+        [
+          {
+            "node": "Evaluator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Evaluator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Evaluator",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluator": {
+      "main": [
+        [
+          {
+            "node": "update state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update state": {
+      "main": [
+        [
+          {
+            "node": "Check for pass/max iterations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for pass/max iterations": {
+      "main": [
+        [
+          {
+            "node": "Output translation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "build generator/ optimizer prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "144c6994-e0e8-43fd-9e45-0d4f71dc0a22",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf2dbac7946681ca7b3e10e8d83af81b6883302b18f614a88ca86b6b9d7f56ec"
+  },
+  "id": "l4Y9VhNeihwdKwOd",
+  "tags": []
+}

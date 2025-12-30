@@ -1,0 +1,311 @@
+{
+  "name": "Mpesa logger",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const date = new Date($input.first().json.timestamp);\n\nconst day = date.getDate(); // no leading zero\nconst month = date.getMonth() + 1; // JS months are 0-based\nconst year = date.getFullYear().toString().slice(-2); // '25' from '2025'\n\nconst formattedDate = `${day}/${month}/${year}`;\nconst yesterday = `${day-1}/${month}/${year}`;\n\nreturn [{\n  json: {\n    todayDate: formattedDate,\n    yesterday\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -128
+      ],
+      "id": "52cdb07a-67c4-49ad-8e97-a8b97d0dec45",
+      "name": "date finder"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "q": "={{ $json.todayDate }}[SMSForwarder] New message from MPESA ",
+          "sender": "mungairamsey01@gmail.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        -128
+      ],
+      "id": "8244e87a-9670-4ae9-94fd-5cd30a60a94a",
+      "name": "messages retreiver",
+      "webhookId": "a908e9b0-b2a6-46a3-a2ee-641cc75bc12c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5Eem4HqMMXUq4Ac4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Yb_Zcx9HUnOYQTxcbVUgunB1hTg5doD20h1fbDxSe90/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "TransactionID"
+          ],
+          "schema": [
+            {
+              "id": "TransactionID",
+              "displayName": "TransactionID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Recipient",
+              "displayName": "Recipient",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sender",
+              "displayName": "Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Balance",
+              "displayName": "Balance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TransactionCost",
+              "displayName": "TransactionCost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1104,
+        -128
+      ],
+      "id": "5394b13b-cd93-4718-af59-98475086d43c",
+      "name": "google sheets updater",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y4Egfm9EiQrPx2PY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 23
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -128
+      ],
+      "id": "e0f8301e-486c-4094-936e-f42506bdd52f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AIzaSyAtqBQp65a_osrra5bGJI1VQR6WcYchmpE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Extract the following details from the message below:\\n\\n- TransactionID\\n- Amount\\n- Sender (if money received)\\n- Recipient (if money sent)\\n- Date\\n- Time\\n- Balance\\n- TransactionCost\\n\\nSpecial Rule:\\n- If the message contains the word 'Give', treat it as a deposit (received), and extract sender details. Set recipient as 'NIL'.\\n- If money was received, extract sender and set recipient as 'NIL'.\\n- If money was sent, extract recipient and set sender as 'NIL'.\\n\\nReturn the result in this exact JSON format:\\n\\n```json\\n{\\n  \\\"TransactionID\\\": \\\"...\\\",\\n  \\\"Amount\\\": ...,\\n  \\\"Sender\\\": \\\"...\\\",\\n  \\\"Recipient\\\": \\\"...\\\",\\n  \\\"Date\\\": \\\"...\\\",\\n  \\\"Time\\\": \\\"...\\\",\\n  \\\"Balance\\\": ...,\\n  \\\"TransactionCost\\\": ...\\n}\\n```\\n\\nMessage:\\n{{ $json.snippet }}\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"stopSequences\": [\n      \"Title\"\n    ],\n    \"temperature\": 0.3,\n    \"topP\": 0.8,\n    \"topK\": 10\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        -128
+      ],
+      "id": "d0b7ed5b-3ed1-47a0-8116-c919da1789c9",
+      "name": "message parsing"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- Utility: Clean monetary strings or fallback to 0\nconst cleanKsh = (val) => {\n  if (typeof val === \"number\") return val;\n  if (!val || typeof val !== \"string\") return 0;\n  return parseFloat(val.replace(/Ksh/i, \"\").replace(/,/g, \"\").trim()) || 0;\n};\n\n// --- Normalization map for field names with known typos and variations\nconst keyMap = {\n  \"transaction id\": \"TransactionID\",\n  \"transactionid\": \"TransactionID\",\n  \"amount\": \"Amount\",\n  \"ammount\": \"Amount\",\n  \"sender\": \"Sender\",\n  \"recipient\": \"Recipient\",\n  \"date\": \"Date\",\n  \"time\": \"Time\",\n  \"balance\": \"Balance\",\n  \"transaction cost\": \"TransactionCost\",\n  \"transactin cost\": \"TransactionCost\"\n};\n\nconst results = [];\nconst seenTransactionIDs = new Set();\n\nfor (const item of items) {\n  let text;\n  try {\n    text = item.json?.candidates?.[0]?.content?.parts?.[0]?.text;\n    if (!text) continue; // Skip blank item\n\n    // Remove ```json and ``` markers\n    const jsonBlock = text.replace(/```json|```/gi, \"\").trim();\n\n    let data;\n    try {\n      // Try JSON.parse\n      data = JSON.parse(jsonBlock);\n    } catch {\n      // Fallback: manual line parsing\n      data = {};\n      const lines = jsonBlock.split(\"\\n\");\n      for (const line of lines) {\n        const [rawKey, ...rest] = line.split(\":\");\n        if (!rawKey || rest.length === 0) continue;\n        const normalizedKey = keyMap[rawKey.trim().toLowerCase()];\n        if (normalizedKey) {\n          data[normalizedKey] = rest.join(\":\").trim().replace(/^\"|\"$/g, \"\");\n        }\n      }\n    }\n\n    const transactionID = data.TransactionID?.trim();\n    if (!transactionID) continue; // Skip if no Transaction ID\n    if (seenTransactionIDs.has(transactionID)) continue; // Skip duplicates\n    seenTransactionIDs.add(transactionID);\n\n    const amount = cleanKsh(data.Amount);\n    const sender = data.Sender || \"NIL\";\n    const recipient = data.Recipient || \"NIL\";\n    const dateStr = data.Date || \"01/01/25\";\n    const timeStr = data.Time || \"12:00 AM\";\n    const balance = cleanKsh(data.Balance);\n    const transactionCost = cleanKsh(data.TransactionCost);\n\n    // Parse date + time into ISO timestamp\n    let timestamp = new Date().toISOString(); // fallback\n    try {\n      const [day, month, year] = dateStr.split(\"/\").map(Number);\n      const isoDate = `${2000 + year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;\n      const fullDateStr = `${isoDate} ${timeStr} GMT+3`;\n      const parsedDate = new Date(fullDateStr);\n      if (!isNaN(parsedDate.getTime())) {\n        timestamp = parsedDate.toISOString();\n      }\n    } catch {\n      // fallback remains\n    }\n\n    results.push({\n      json: {\n        TransactionID: transactionID,\n        Amount: amount,\n        Sender: sender,\n        Recipient: recipient,\n        Date: dateStr,\n        Time: timeStr,\n        Timestamp: timestamp,\n        Balance: balance,\n        TransactionCost: transactionCost\n      }\n    });\n\n  } catch (err) {\n    continue; // Silent skip on error\n  }\n}\n\n// ✅ Sort results chronologically\nresults.sort((a, b) => new Date(a.json.Timestamp) - new Date(b.json.Timestamp));\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -128
+      ],
+      "id": "138bb827-1c60-4da5-8c75-9f819480a849",
+      "name": "items labelling "
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "date finder": {
+      "main": [
+        [
+          {
+            "node": "messages retreiver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "messages retreiver": {
+      "main": [
+        [
+          {
+            "node": "message parsing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "date finder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "message parsing": {
+      "main": [
+        [
+          {
+            "node": "items labelling ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "items labelling ": {
+      "main": [
+        [
+          {
+            "node": "google sheets updater",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "google sheets updater": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e2eb5c47-f765-4215-aa94-2b74c370bc86",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf2dbac7946681ca7b3e10e8d83af81b6883302b18f614a88ca86b6b9d7f56ec"
+  },
+  "id": "S9cEesIAb4B0QGAD",
+  "tags": []
+}
